@@ -1,0 +1,1355 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>채권 포트폴리오 종합관리</title>
+<style>
+  :root{
+    --navy:#0F1B33;
+    --navy-2:#16233F;
+    --navy-3:#1E2E52;
+    --accent:#C9962C;
+    --accent-soft:#E9D6A8;
+    --bg:#F4F5F8;
+    --card:#FFFFFF;
+    --text:#1B2430;
+    --muted:#6B7686;
+    --border:#E4E7EC;
+    --gain:#D6455A;
+    --loss:#3667C7;
+    --safe:#1E8A56;
+    --warn:#B4720C;
+    --gain-bg:#FCEBEE;
+    --loss-bg:#EAF0FB;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Malgun Gothic","Apple SD Gothic Neo",Roboto,sans-serif;
+    background:var(--bg);
+    color:var(--text);
+    font-size:14px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .num{font-family:ui-monospace,SFMono-Regular,Consolas,"Liberation Mono",Menlo,monospace;font-variant-numeric:tabular-nums;}
+  #app{display:flex;min-height:100vh;}
+
+  /* ---------- Sidebar ---------- */
+  .sidebar{
+    width:248px;flex-shrink:0;background:linear-gradient(180deg,var(--navy) 0%,var(--navy-2) 100%);
+    color:#fff;display:flex;flex-direction:column;padding:22px 16px;position:sticky;top:0;height:100vh;
+  }
+  .brand{padding:0 6px 20px 6px;border-bottom:1px solid rgba(255,255,255,0.12);margin-bottom:18px;}
+  .brand .mark{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:8px;
+    background:var(--accent);color:var(--navy);font-weight:800;font-size:15px;margin-bottom:10px;}
+  .brand h1{font-size:15px;margin:0 0 4px 0;font-weight:700;letter-spacing:-0.2px;}
+  .brand p{font-size:11.5px;color:rgba(255,255,255,0.55);margin:0;line-height:1.5;}
+  nav{display:flex;flex-direction:column;gap:3px;flex:1;}
+  .navbtn{
+    display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:8px;color:rgba(255,255,255,0.75);
+    font-size:13px;font-weight:500;cursor:pointer;border:none;background:transparent;text-align:left;width:100%;
+    transition:background .15s,color .15s;
+  }
+  .navbtn:hover{background:rgba(255,255,255,0.06);color:#fff;}
+  .navbtn.active{background:rgba(201,150,44,0.16);color:#fff;box-shadow:inset 3px 0 0 var(--accent);}
+  .navbtn .ico{width:16px;text-align:center;font-size:13px;opacity:.9;}
+
+  .acct-stack{margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,0.12);}
+  .acct-stack h4{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:rgba(255,255,255,0.45);margin:0 0 8px 2px;font-weight:700;}
+  .stackbar{display:flex;height:8px;border-radius:5px;overflow:hidden;margin-bottom:8px;background:rgba(255,255,255,0.08);}
+  .stackbar span{height:100%;}
+  .acct-legend{display:flex;flex-direction:column;gap:5px;}
+  .acct-legend .row{display:flex;align-items:center;justify-content:space-between;font-size:11px;color:rgba(255,255,255,0.68);}
+  .acct-legend .dot{width:7px;height:7px;border-radius:2px;display:inline-block;margin-right:6px;}
+
+  .sidebar-foot{display:flex;flex-direction:column;gap:6px;margin-top:16px;}
+  .ghostbtn{
+    background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.85);
+    padding:8px 10px;border-radius:7px;font-size:11.5px;cursor:pointer;text-align:center;font-weight:600;
+  }
+  .ghostbtn:hover{background:rgba(255,255,255,0.12);}
+
+  /* ---------- Main ---------- */
+  main{flex:1;padding:26px 32px 60px 32px;max-width:1400px;}
+  .topbar{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:20px;}
+  .topbar h2{font-size:20px;margin:0;font-weight:800;letter-spacing:-0.3px;}
+  .topbar .sub{font-size:12.5px;color:var(--muted);margin-top:3px;}
+
+  .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  .kpi{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+  .kpi .lbl{font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;}
+  .kpi .val{font-size:20px;font-weight:800;letter-spacing:-0.3px;}
+  .kpi .val.gain{color:var(--gain);}
+  .kpi .val.loss{color:var(--loss);}
+  .kpi .sub{font-size:11.5px;color:var(--muted);margin-top:5px;}
+
+  .grid2{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:22px;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;}
+  .card h3{font-size:14px;margin:0 0 14px 0;font-weight:700;display:flex;align-items:center;justify-content:space-between;}
+  .card h3 .muted{font-size:11.5px;color:var(--muted);font-weight:500;}
+
+  table{width:100%;border-collapse:collapse;font-size:12.5px;}
+  th{
+    background:#F8F9FB;color:var(--muted);font-weight:700;text-transform:uppercase;font-size:10.5px;
+    letter-spacing:.3px;padding:9px 10px;border-bottom:1px solid var(--border);text-align:right;white-space:nowrap;
+  }
+  th.l{text-align:left;}
+  td{padding:9px 10px;border-bottom:1px solid #F0F1F4;text-align:right;white-space:nowrap;}
+  td.l{text-align:left;}
+  tr:hover td{background:#FAFBFD;}
+  .tag{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10.5px;font-weight:700;}
+  .tag.CMA{background:#EAF0FB;color:#2B54A8;}
+  .tag.ISA{background:#EAF7F0;color:#1E8A56;}
+  .tag.IRP{background:#FBF1E5;color:#B4720C;}
+  .tag.IMA{background:#F3EAFB;color:#7A34C2;}
+  .tag.type{background:#EEF0F4;color:#48505C;}
+  .tag.tax-과세{background:#FCEBEE;color:#B3213A;}
+  .tag.tax-비과세{background:#EAF7F0;color:#1E8A56;}
+  .tag.tax-과세이연{background:#FBF1E5;color:#B4720C;}
+  .status-pill{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:11.5px;font-weight:700;}
+  .status-safe{background:#EAF7F0;color:var(--safe);}
+  .status-warn{background:#FBF1E5;color:var(--warn);}
+  .status-high{background:#FCEBEE;color:var(--gain);}
+  .pill-gain{color:var(--gain);font-weight:700;}
+  .pill-loss{color:var(--loss);font-weight:700;}
+
+  .btn{
+    background:var(--navy);color:#fff;border:none;padding:8px 14px;border-radius:7px;font-size:12.5px;
+    font-weight:700;cursor:pointer;
+  }
+  .btn:hover{background:var(--navy-3);}
+  .btn.accent{background:var(--accent);color:var(--navy);}
+  .btn.small{padding:5px 10px;font-size:11.5px;}
+  .btn.outline{background:#fff;border:1px solid var(--border);color:var(--text);}
+  .btn.danger{background:#fff;border:1px solid #F1C6CE;color:var(--gain);}
+  .icon-btn{background:none;border:none;cursor:pointer;font-size:13px;color:var(--muted);padding:4px 6px;}
+  .icon-btn:hover{color:var(--text);}
+
+  .toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+  .toolbar .left{font-size:12.5px;color:var(--muted);}
+
+  .note{font-size:12px;color:var(--muted);background:#F8F9FB;border:1px dashed var(--border);border-radius:8px;padding:10px 12px;margin-bottom:16px;line-height:1.6;}
+
+  select, input[type=text], input[type=number], input[type=date]{
+    font-family:inherit;font-size:12.5px;padding:7px 9px;border-radius:6px;border:1px solid var(--border);
+    background:#fff;color:var(--text);width:100%;
+  }
+  select:focus, input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent);}
+  label{display:block;font-size:11.5px;font-weight:700;color:var(--muted);margin-bottom:4px;}
+  .field{margin-bottom:12px;}
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+  /* modal */
+  .overlay{position:fixed;inset:0;background:rgba(15,27,51,0.45);display:flex;align-items:center;justify-content:center;z-index:50;}
+  .modal{background:#fff;border-radius:14px;padding:26px 28px;width:640px;max-height:88vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,0.25);}
+  .modal h3{margin:0 0 4px 0;font-size:16px;}
+  .modal .desc{font-size:12px;color:var(--muted);margin-bottom:18px;}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:18px;padding-top:16px;border-top:1px solid var(--border);}
+
+  .bond-select{display:flex;gap:10px;align-items:center;margin-bottom:18px;flex-wrap:wrap;}
+  .bond-select select{width:auto;min-width:280px;}
+
+  .chart-wrap{position:relative;height:260px;}
+  .chart-wrap.small{height:230px;}
+
+  .help h4{font-size:13.5px;margin:20px 0 8px 0;color:var(--navy);}
+  .help p, .help li{font-size:13px;line-height:1.75;color:#3A4250;}
+  .help ul{margin:0 0 4px 0;padding-left:20px;}
+  .badge-example{font-size:10.5px;color:var(--muted);font-style:italic;}
+
+  .empty{padding:36px 10px;text-align:center;color:var(--muted);font-size:13px;}
+  .scrollx{overflow-x:auto;}
+
+  .threshold-bar{position:relative;height:34px;background:#F0F2F5;border-radius:8px;overflow:visible;margin:10px 0 26px 0;}
+  .threshold-bar .fill{position:absolute;left:0;top:0;height:100%;border-radius:8px 0 0 8px;transition:width .2s;}
+  .threshold-bar .mark{position:absolute;top:-4px;bottom:-4px;width:2px;background:#8A94A3;}
+  .threshold-bar .mark .lbl{position:absolute;top:-20px;left:50%;transform:translateX(-50%);font-size:10px;color:var(--muted);white-space:nowrap;font-weight:700;}
+  .threshold-bar .cur-lbl{position:absolute;right:8px;top:8px;font-size:11px;font-weight:800;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.25);}
+
+  .month-table th, .month-table td{padding:7px 8px;font-size:11.5px;}
+  .month-table th.sticky, .month-table td.sticky{position:sticky;left:0;background:#fff;z-index:2;box-shadow:2px 0 3px rgba(0,0,0,0.03);}
+  .month-table th.sticky{background:#F8F9FB;z-index:3;}
+  .month-table tr.subtotal td{background:#F8F9FB;font-weight:700;}
+  .controls-row{display:flex;gap:14px;align-items:flex-end;margin-bottom:16px;flex-wrap:wrap;}
+  .controls-row .field{margin-bottom:0;min-width:160px;}
+
+  ::-webkit-scrollbar{width:8px;height:8px;}
+  ::-webkit-scrollbar-thumb{background:#D7DAE1;border-radius:8px;}
+
+  @media (max-width:1000px){
+    .kpi-row{grid-template-columns:repeat(2,1fr);}
+    .grid2{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+/* ============================================================
+   DATA MODEL
+============================================================ */
+const ACCOUNTS = ["CMA","ISA","IRP","IMA"];
+const TYPES = ["국내채권","해외채권","ETF","구조화상품"];
+const BOND_TYPES = ["국내채권","해외채권"];
+const TAX_CATS = ["과세","비과세","과세이연"];
+
+function defaultTaxCategory(account){
+  if(account==="ISA") return "비과세";
+  if(account==="IRP") return "과세이연";
+  return "과세";
+}
+
+let uidCounter = 1;
+function uid(){ return "h" + (uidCounter++); }
+
+function seedHoldings(){
+  return [
+    { id: uid(), account:"CMA", assetType:"국내채권", name:"국고채21-8", rating:"국채", currency:"KRW",
+      issueDate:"2021-12-10", maturityDate:"2029-12-10", couponRate:0.01375, cycleMonths:6,
+      settlementDate:"2026-08-07", firstCouponDate:"2026-12-10", pricePct:92.88, quantity:100000000,
+      fxRate:1, taxRate:0.140, currentPrice:null, taxCategory:"과세", note:"예시(가상) - 실제 조건으로 교체" },
+    { id: uid(), account:"CMA", assetType:"국내채권", name:"한국전력공사채권1022", rating:"AAA", currency:"KRW",
+      issueDate:"2020-03-04", maturityDate:"2030-03-04", couponRate:0.01479, cycleMonths:6,
+      settlementDate:"2026-08-08", firstCouponDate:"2026-09-04", pricePct:92.07, quantity:100000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"첨부 매매계산서 실제 수치" },
+    { id: uid(), account:"CMA", assetType:"국내채권", name:"대한항공채", rating:"A-", currency:"KRW",
+      issueDate:"2024-06-15", maturityDate:"2029-06-15", couponRate:0.0450, cycleMonths:3,
+      settlementDate:"2026-08-08", firstCouponDate:"2026-09-15", pricePct:100.00, quantity:100000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"예시(가상) - 실제 조건으로 교체" },
+    { id: uid(), account:"CMA", assetType:"국내채권", name:"KT193-3", rating:"AAA", currency:"KRW",
+      issueDate:"2020-06-17", maturityDate:"2030-06-17", couponRate:0.01608, cycleMonths:3,
+      settlementDate:"2026-08-08", firstCouponDate:"2026-09-17", pricePct:91.45, quantity:100000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"첨부 매매계산서 실제 수치" },
+    { id: uid(), account:"CMA", assetType:"해외채권", name:"브라질국채(BRL)", rating:"BB", currency:"BRL",
+      issueDate:"2024-01-05", maturityDate:"2035-01-01", couponRate:0.10000, cycleMonths:6,
+      settlementDate:"2026-08-07", firstCouponDate:"2027-01-01", pricePct:80.50, quantity:100000,
+      fxRate:278.67, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"예시(가상) - 실제 조건으로 교체" },
+    { id: uid(), account:"CMA", assetType:"해외채권", name:"브라질국채(USD, Brazil 8 1/4 01/20/34)", rating:"BB", currency:"USD",
+      issueDate:"2004-01-20", maturityDate:"2034-01-20", couponRate:0.08250, cycleMonths:6,
+      settlementDate:"2026-08-11", firstCouponDate:"2027-01-20", pricePct:114.95, quantity:62000,
+      fxRate:1423.5, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"첨부 매매계산서 실제 수치(세율은 가정치)" },
+    { id: uid(), account:"CMA", assetType:"ETF", name:"TIGER S&P500", rating:"-", currency:"KRW",
+      issueDate:null, maturityDate:null, couponRate:0, cycleMonths:0,
+      settlementDate:"2026-09-01", firstCouponDate:null, pricePct:22000, quantity:100,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"매수 예정(플레이스홀더)" },
+    { id: uid(), account:"CMA", assetType:"ETF", name:"TIGER 미국나스닥100", rating:"-", currency:"KRW",
+      issueDate:null, maturityDate:null, couponRate:0, cycleMonths:0,
+      settlementDate:"2026-09-01", firstCouponDate:null, pricePct:15000, quantity:100,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"매수 예정(플레이스홀더)" },
+    { id: uid(), account:"ISA", assetType:"국내채권", name:"대한항공채", rating:"A-", currency:"KRW",
+      issueDate:"2024-06-15", maturityDate:"2029-06-15", couponRate:0.0450, cycleMonths:3,
+      settlementDate:"2026-08-08", firstCouponDate:"2026-09-15", pricePct:100.00, quantity:50000000,
+      fxRate:1, taxRate:0.000, currentPrice:null, taxCategory:"비과세", note:"ISA계좌(비과세 한도 초과분은 9.9% 분리과세, 종합과세 제외)" },
+    { id: uid(), account:"IRP", assetType:"국내채권", name:"국고채21-8", rating:"국채", currency:"KRW",
+      issueDate:"2021-12-10", maturityDate:"2029-12-10", couponRate:0.01375, cycleMonths:6,
+      settlementDate:"2026-08-07", firstCouponDate:"2026-12-10", pricePct:92.88, quantity:50000000,
+      fxRate:1, taxRate:0.000, currentPrice:null, taxCategory:"과세이연", note:"IRP계좌(인출 시까지 과세이연, 인출 시 연금소득세 등 저율과세)" },
+    { id: uid(), account:"IMA", assetType:"구조화상품", name:"미래에셋4호", rating:"-", currency:"KRW",
+      issueDate:null, maturityDate:null, couponRate:0.03, cycleMonths:0,
+      settlementDate:"2026-08-01", firstCouponDate:null, pricePct:1.00, quantity:100000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"IMA는 목표수익률 개념(만기/조기상환 조건 별도 확인)" },
+  ];
+}
+
+let holdings = seedHoldings();
+let activeTab = "dashboard";
+let selectedBondId = null;
+let monthlyStartYM = null; // "YYYY-MM", initialized lazily to earliest settlement month
+let monthlyCount = 36;
+
+
+/* ============================================================
+   HELPERS
+============================================================ */
+function isBond(h){ return BOND_TYPES.includes(h.assetType); }
+function fmtInt(n){
+  if(n===null || n===undefined || isNaN(n)) return "-";
+  return Math.round(n).toLocaleString("ko-KR");
+}
+function fmtNum(n, d=2){
+  if(n===null || n===undefined || isNaN(n)) return "-";
+  return n.toLocaleString("ko-KR", {minimumFractionDigits:d, maximumFractionDigits:d});
+}
+function fmtPct(n, d=2){
+  if(n===null || n===undefined || isNaN(n)) return "-";
+  return (n*100).toLocaleString("ko-KR", {minimumFractionDigits:d, maximumFractionDigits:d}) + "%";
+}
+function fmtDate(s){
+  if(!s) return "-";
+  return s;
+}
+function pnlClass(n){
+  if(n===null||n===undefined||isNaN(n)) return "";
+  return n>=0 ? "pill-gain" : "pill-loss";
+}
+function addMonths(dateObj, months){
+  const d = new Date(dateObj.getTime());
+  const day = d.getDate();
+  d.setMonth(d.getMonth()+months);
+  if(d.getDate() !== day){ d.setDate(0); }
+  return d;
+}
+function parseDate(s){ return new Date(s + "T00:00:00"); }
+function toISO(d){ return d.toISOString().slice(0,10); }
+
+function purchaseAmountLocal(h){
+  if(isBond(h)) return h.quantity * h.pricePct / 100;
+  return h.quantity * h.pricePct;
+}
+function purchaseAmountKRW(h){
+  return purchaseAmountLocal(h) * h.fxRate;
+}
+
+/* Generate the coupon / cash-flow schedule for a bond holding (mirrors the spreadsheet formulas) */
+function generateSchedule(h){
+  if(!isBond(h) || !h.firstCouponDate || !h.maturityDate || !h.settlementDate) return [];
+  const face = h.quantity;
+  const coupon = h.couponRate;
+  const cycle = h.cycleMonths || 6;
+  const maturity = parseDate(h.maturityDate);
+  const settle = parseDate(h.settlementDate);
+  const fx = h.fxRate;
+  const tax = h.taxRate;
+  const purchaseKRW = purchaseAmountKRW(h);
+
+  const rows = [];
+  let currentDate = parseDate(h.firstCouponDate);
+  let prevDate = settle;
+  let no = 1;
+  let cumKRW = 0;
+  let guard = 0;
+
+  while(guard < 400){
+    guard++;
+    const isFirst = (no === 1);
+    const grossInterest = Math.round(face * coupon * cycle / 12);
+    let holdInterest;
+    if(isFirst){
+      const days = (currentDate - prevDate) / 86400000;
+      holdInterest = Math.round(face * coupon * Math.max(days,0) / 365);
+    } else {
+      holdInterest = grossInterest;
+    }
+    const taxAmt = Math.round(holdInterest * tax);
+    const netInterest = holdInterest - taxAmt;
+    const isMaturity = currentDate.getTime() >= maturity.getTime();
+    const principal = isMaturity ? face : 0;
+    const cashLocal = netInterest + principal;
+    const cashKRW = cashLocal * fx;
+    cumKRW += cashKRW;
+    const pnl = cumKRW - purchaseKRW;
+    const ret = purchaseKRW !== 0 ? pnl / purchaseKRW : 0;
+
+    rows.push({
+      no, date: toISO(currentDate), grossInterest, holdInterest, taxAmt, netInterest,
+      principal, cashLocal, cashKRW, cumKRW, pnl, ret
+    });
+
+    if(isMaturity) break;
+    prevDate = currentDate;
+    let next = addMonths(currentDate, cycle);
+    if(next.getTime() >= maturity.getTime()) next = new Date(maturity.getTime());
+    currentDate = next;
+    no++;
+  }
+  return rows;
+}
+
+function bondSummary(h){
+  const sched = generateSchedule(h);
+  if(sched.length===0) return null;
+  const last = sched[sched.length-1];
+  const grossInterestSum = sched.reduce((s,r)=>s+r.holdInterest,0);
+  const taxSum = sched.reduce((s,r)=>s+r.taxAmt,0);
+  const netInterestSum = sched.reduce((s,r)=>s+r.netInterest,0);
+  const principalSum = sched.reduce((s,r)=>s+r.principal,0);
+  const purchaseLocal = purchaseAmountLocal(h);
+  const purchaseKRW = purchaseAmountKRW(h);
+  const years = (parseDate(h.maturityDate) - parseDate(h.settlementDate)) / (365*86400000);
+  const totalPnlKRW = last.pnl;
+  const simpleAnnualReturn = years>0 ? totalPnlKRW / purchaseKRW / years : 0;
+  return {
+    schedule: sched, purchaseLocal, purchaseKRW, grossInterestSum, taxSum, netInterestSum,
+    principalSum, years, totalPnlKRW, simpleAnnualReturn, finalReturn: last.ret
+  };
+}
+
+function etfSummary(h){
+  const purchaseKRW = purchaseAmountKRW(h);
+  const purchaseLocal = purchaseAmountLocal(h);
+  let evalKRW = null, pnl = null, ret = null;
+  if(h.currentPrice !== null && h.currentPrice !== undefined && h.currentPrice !== ""){
+    const evalLocal = h.quantity * parseFloat(h.currentPrice);
+    evalKRW = evalLocal * h.fxRate;
+    pnl = evalKRW - purchaseKRW;
+    ret = purchaseKRW !== 0 ? pnl / purchaseKRW : 0;
+  }
+  return { purchaseLocal, purchaseKRW, evalKRW, pnl, ret };
+}
+
+function finalPnlKRW(h){
+  if(isBond(h)){
+    const s = bondSummary(h);
+    return s ? s.totalPnlKRW : null;
+  } else {
+    const s = etfSummary(h);
+    return s.pnl;
+  }
+}
+
+/* ---------- Annual financial-income (이자소득) analysis, by tax category ---------- */
+const HEALTH_INS_THRESHOLD = 10000000;   // 건보료 부과대상 산입 기준: 금융소득 1,000만원 초과분
+const COMPREHENSIVE_TAX_THRESHOLD = 20000000; // 금융소득종합과세 기준: 2,000만원 초과
+
+function annualIncomeAnalysis(){
+  const bonds = holdings.filter(isBond);
+  const yearMap = {}; // year -> {과세:0, 비과세:0, 과세이연:0}
+  bonds.forEach(h=>{
+    const sched = generateSchedule(h);
+    sched.forEach(r=>{
+      const year = r.date.slice(0,4);
+      if(!yearMap[year]) yearMap[year] = {"과세":0, "비과세":0, "과세이연":0};
+      const grossKRW = r.holdInterest * h.fxRate; // 세전(원천징수 전) 기준 - 금융소득 판정은 세전 총수입금액 기준
+      yearMap[year][h.taxCategory] = (yearMap[year][h.taxCategory]||0) + grossKRW;
+    });
+  });
+  return Object.keys(yearMap).sort().map(year=>({ year, ...yearMap[year] }));
+}
+
+function incomeStatus(taxableAmt){
+  if(taxableAmt > COMPREHENSIVE_TAX_THRESHOLD) return {level:"high", cls:"status-high", label:"금융소득종합과세 대상"};
+  if(taxableAmt > HEALTH_INS_THRESHOLD) return {level:"warn", cls:"status-warn", label:"건보료 영향 구간"};
+  return {level:"safe", cls:"status-safe", label:"기준 이하(분리과세 종결)"};
+}
+
+/* ---------- Monthly cash-flow matrix (이자를 이자발생월 다음 달부터 균등 안분) ---------- */
+function ymAdd(year, month, delta){
+  let y=year, m=month+delta;
+  while(m>12){ m-=12; y+=1; }
+  while(m<1){ m+=12; y-=1; }
+  return {y, m};
+}
+function ymKey(y,m){ return `${y}-${String(m).padStart(2,"0")}`; }
+
+function buildMonthlyMatrix(startYear, startMonth, monthCount){
+  const months = [];
+  let y=startYear, m=startMonth;
+  for(let i=0;i<monthCount;i++){
+    months.push(ymKey(y,m));
+    const nxt = ymAdd(y,m,1); y=nxt.y; m=nxt.m;
+  }
+  const idx = {}; months.forEach((k,i)=>idx[k]=i);
+
+  const bonds = holdings.filter(isBond);
+  const perBond = bonds.map(h=>{
+    const net = new Array(months.length).fill(0);
+    const gross = new Array(months.length).fill(0);
+    const principal = new Array(months.length).fill(0);
+    const sched = generateSchedule(h);
+    sched.forEach(r=>{
+      const d = new Date(r.date + "T00:00:00");
+      const span = Math.max(h.cycleMonths || 1, 1);
+      const monthlyNet = (r.netInterest * h.fxRate) / span;
+      const monthlyGross = (r.holdInterest * h.fxRate) / span;
+      let {y:yy, m:mm} = ymAdd(d.getFullYear(), d.getMonth()+1, 1); // 이자발생(확정)월 "다음 달"부터
+      for(let k=0;k<span;k++){
+        const key = ymKey(yy,mm);
+        if(idx[key]!==undefined){ net[idx[key]] += monthlyNet; gross[idx[key]] += monthlyGross; }
+        const nxt = ymAdd(yy,mm,1); yy=nxt.y; mm=nxt.m;
+      }
+      if(r.principal>0){
+        const pKey = ymKey(d.getFullYear(), d.getMonth()+1);
+        if(idx[pKey]!==undefined) principal[idx[pKey]] += r.principal * h.fxRate;
+      }
+    });
+    return { holding:h, net, gross, principal };
+  });
+
+  const totalsByCategory = {"과세":new Array(months.length).fill(0), "비과세":new Array(months.length).fill(0), "과세이연":new Array(months.length).fill(0)};
+  const totalNet = new Array(months.length).fill(0);
+  const totalPrincipal = new Array(months.length).fill(0);
+  perBond.forEach(pb=>{
+    pb.net.forEach((v,i)=>{ totalNet[i]+=v; totalsByCategory[pb.holding.taxCategory][i]+=v; });
+    pb.principal.forEach((v,i)=>{ totalPrincipal[i]+=v; });
+  });
+
+  return { months, perBond, totalsByCategory, totalNet, totalPrincipal };
+}
+
+/* ============================================================
+   RENDER: SHELL
+============================================================ */
+function render(){
+  const app = document.getElementById("app");
+  const totalKRW = holdings.reduce((s,h)=>s+purchaseAmountKRW(h),0);
+  const acctTotals = {};
+  ACCOUNTS.forEach(a=> acctTotals[a] = holdings.filter(h=>h.account===a).reduce((s,h)=>s+purchaseAmountKRW(h),0));
+  const acctColors = {CMA:"#2B54A8", ISA:"#1E8A56", IRP:"#B4720C", IMA:"#7A34C2"};
+
+  app.innerHTML = `
+    <div class="sidebar">
+      <div class="brand">
+        <div class="mark">B</div>
+        <h1>채권 포트폴리오</h1>
+        <p>CMA · ISA · IRP · IMA 통합관리</p>
+      </div>
+      <nav>
+        ${navBtn("dashboard","▤","종합현황")}
+        ${navBtn("holdings","▥","보유자산목록")}
+        ${navBtn("bond","◒","채권현금흐름")}
+        ${navBtn("etf","◇","ETF · IMA현황")}
+        ${navBtn("tax","⛁","세금·건보료")}
+        ${navBtn("monthly","▦","월별현금흐름")}
+        ${navBtn("help","?","사용법")}
+      </nav>
+      <div class="acct-stack">
+        <h4>계좌별 비중</h4>
+        <div class="stackbar">
+          ${ACCOUNTS.map(a=>{
+            const pct = totalKRW>0 ? (acctTotals[a]/totalKRW*100) : 0;
+            return `<span style="width:${pct}%;background:${acctColors[a]}"></span>`;
+          }).join("")}
+        </div>
+        <div class="acct-legend">
+          ${ACCOUNTS.map(a=>`
+            <div class="row">
+              <span><span class="dot" style="background:${acctColors[a]}"></span>${a}</span>
+              <span class="num">${fmtInt(acctTotals[a])}</span>
+            </div>`).join("")}
+        </div>
+      </div>
+      <div style="flex:1"></div>
+      <div class="sidebar-foot">
+        <button class="ghostbtn" onclick="exportData()">⭳ JSON 내보내기</button>
+        <button class="ghostbtn" onclick="document.getElementById('importFile').click()">⭱ JSON 가져오기</button>
+        <button class="ghostbtn" onclick="resetData()">↺ 예시 데이터로 초기화</button>
+        <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      </div>
+    </div>
+    <main id="main"></main>
+  `;
+  renderMain();
+}
+function navBtn(key, icon, label){
+  return `<button class="navbtn ${activeTab===key?'active':''}" onclick="setTab('${key}')">
+    <span class="ico">${icon}</span>${label}
+  </button>`;
+}
+function setTab(key){ activeTab = key; if(key!=="bond") {} render(); }
+
+function renderMain(){
+  const main = document.getElementById("main");
+  if(activeTab==="dashboard") main.innerHTML = dashboardHTML();
+  else if(activeTab==="holdings") main.innerHTML = holdingsHTML();
+  else if(activeTab==="bond") main.innerHTML = bondHTML();
+  else if(activeTab==="etf") main.innerHTML = etfHTML();
+  else if(activeTab==="tax") main.innerHTML = taxHTML();
+  else if(activeTab==="monthly") main.innerHTML = monthlyHTML();
+  else if(activeTab==="help") main.innerHTML = helpHTML();
+  afterRender();
+}
+
+/* ============================================================
+   DASHBOARD
+============================================================ */
+function dashboardHTML(){
+  const totalKRW = holdings.reduce((s,h)=>s+purchaseAmountKRW(h),0);
+  const bondHoldings = holdings.filter(isBond);
+  const bondPnlTotal = bondHoldings.reduce((s,h)=>{
+    const summ = bondSummary(h);
+    return s + (summ? summ.totalPnlKRW : 0);
+  },0);
+  const etfHoldings = holdings.filter(h=>!isBond(h));
+  const etfPnlKnown = etfHoldings.filter(h=>h.currentPrice!==null && h.currentPrice!=="" && h.currentPrice!==undefined);
+
+  const typeTotals = {};
+  TYPES.forEach(t=> typeTotals[t] = holdings.filter(h=>h.assetType===t).reduce((s,h)=>s+purchaseAmountKRW(h),0));
+
+  const taxTotals = {"과세":0,"비과세":0,"과세이연":0};
+  holdings.forEach(h=>{ taxTotals[h.taxCategory] = (taxTotals[h.taxCategory]||0) + purchaseAmountKRW(h); });
+
+  // combined cash-flow across all bonds, merged by calendar date
+  const dateMap = {};
+  bondHoldings.forEach(h=>{
+    const sched = generateSchedule(h);
+    sched.forEach(r=>{ dateMap[r.date] = (dateMap[r.date]||0) + r.cashKRW; });
+  });
+  const sortedDates = Object.keys(dateMap).sort();
+  let running = 0;
+  const combinedSeries = sortedDates.map(d=>{ running += dateMap[d]; return {label:d, value:running}; });
+
+  const rows = holdings.map(h=>{
+    const pnl = finalPnlKRW(h);
+    const source = isBond(h) ? "채권현금흐름" : "ETF_IMA현황";
+    return `<tr>
+      <td class="l"><span class="tag ${h.account}">${h.account}</span></td>
+      <td class="l"><span class="tag type">${h.assetType}</span></td>
+      <td class="l">${h.name}</td>
+      <td class="l"><span class="tag tax-${h.taxCategory}">${h.taxCategory}</span></td>
+      <td>${h.currency}</td>
+      <td class="num">${fmtInt(purchaseAmountKRW(h))}</td>
+      <td class="num ${pnlClass(pnl)}">${pnl===null?'평가금액 입력필요':fmtInt(pnl)}</td>
+      <td class="l">${source}</td>
+    </tr>`;
+  }).join("");
+
+  return `
+    <div class="topbar">
+      <div><h2>종합현황</h2><div class="sub">전 계좌(CMA · ISA · IRP · IMA) 통합 대시보드 — 자산 · 세무 · 시간 흐름 다각도 분석</div></div>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="lbl">총 투자금액 (KRW)</div><div class="val num">${fmtInt(totalKRW)}</div><div class="sub">보유(예정) ${holdings.length}건</div></div>
+      <div class="kpi"><div class="lbl">채권 만기예상 총손익 (세후)</div><div class="val num ${pnlClass(bondPnlTotal)}">${fmtInt(bondPnlTotal)}</div><div class="sub">채권 ${bondHoldings.length}건 기준</div></div>
+      <div class="kpi"><div class="lbl">ETF·IMA 평가 입력 현황</div><div class="val">${etfPnlKnown.length} / ${etfHoldings.length}</div><div class="sub">현재가 입력된 건수</div></div>
+      <div class="kpi"><div class="lbl">계좌 수</div><div class="val">${ACCOUNTS.length}개</div><div class="sub">CMA · ISA · IRP · IMA</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>전체 채권 통합 누적현금흐름(세후, KRW) <span class="muted">모든 채권을 실제 지급일 기준으로 합산 — 포트폴리오 전체의 시간 흐름 관점</span></h3>
+      <div class="chart-wrap"><div style="height:100%">${combinedSeries.length? lineChartSVG(combinedSeries,{color:"#0F1B33"}) : '<div class="empty">등록된 채권이 없습니다.</div>'}</div></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>계좌별 투자금액</h3>
+        <div class="chart-wrap small" id="chartAcct"></div>
+      </div>
+      <div class="card">
+        <h3>자산유형별 비중</h3>
+        <div class="chart-wrap small" id="chartType"></div>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>과세구분별 비중 <span class="muted">매수금액(KRW) 기준 — 세무 관점</span></h3>
+      <div class="chart-wrap small" id="chartTax"></div>
+    </div>
+    <div class="card">
+      <h3>보유자산 손익 현황 <span class="muted">${holdings.length}건</span></h3>
+      <div class="scrollx"><table>
+        <thead><tr><th class="l">계좌</th><th class="l">자산유형</th><th class="l">종목명</th><th class="l">과세구분</th><th>통화</th>
+          <th>매수금액(KRW)</th><th>만기예상/평가손익(KRW)</th><th class="l">손익원천</th></tr></thead>
+        <tbody>${rows || `<tr><td colspan="8" class="empty">등록된 자산이 없습니다.</td></tr>`}</tbody>
+      </table></div>
+    </div>
+    <input type="hidden" id="__acctData" value='${JSON.stringify(ACCOUNTS.map(a=>({a,v:holdings.filter(h=>h.account===a).reduce((s,h)=>s+purchaseAmountKRW(h),0)})))}'>
+    <input type="hidden" id="__typeData" value='${JSON.stringify(TYPES.map(t=>({t,v:typeTotals[t]})))}'>
+    <input type="hidden" id="__taxData" value='${JSON.stringify(TAX_CATS.map(t=>({t,v:taxTotals[t]})))}'>
+  `;
+}
+
+function drawDashboardCharts(){
+  const acctData = JSON.parse(document.getElementById("__acctData").value);
+  const typeData = JSON.parse(document.getElementById("__typeData").value);
+  const taxData = JSON.parse(document.getElementById("__taxData").value);
+  const acctColors = {CMA:"#2B54A8", ISA:"#1E8A56", IRP:"#B4720C", IMA:"#7A34C2"};
+  const typeColors = {"국내채권":"#0F1B33","해외채권":"#C9962C","ETF":"#3667C7","구조화상품":"#D6455A"};
+  const taxColors = {"과세":"#D6455A","비과세":"#1E8A56","과세이연":"#B4720C"};
+
+  const acctEl = document.getElementById("chartAcct");
+  if(acctEl){
+    acctEl.innerHTML = barChartSVG(acctData.map(d=>({label:d.a, value:d.v, color:acctColors[d.a]})));
+  }
+  const typeEl = document.getElementById("chartType");
+  if(typeEl){
+    typeEl.innerHTML = donutChartHTML(typeData.map(d=>({label:d.t, value:d.v, color:typeColors[d.t]})));
+  }
+  const taxEl = document.getElementById("chartTax");
+  if(taxEl){
+    taxEl.innerHTML = donutChartHTML(taxData.map(d=>({label:d.t, value:d.v, color:taxColors[d.t]})));
+  }
+}
+
+/* ============================================================
+   보유자산목록 (Holdings CRUD)
+============================================================ */
+function holdingsHTML(){
+  const rows = holdings.map(h=>`
+    <tr>
+      <td class="l"><span class="tag ${h.account}">${h.account}</span></td>
+      <td class="l"><span class="tag type">${h.assetType}</span></td>
+      <td class="l">${h.name}<div class="badge-example">${h.note||""}</div></td>
+      <td><span class="tag tax-${h.taxCategory}">${h.taxCategory}</span></td>
+      <td>${h.currency}</td>
+      <td>${fmtDate(h.settlementDate)}</td>
+      <td>${fmtDate(h.maturityDate)}</td>
+      <td class="num">${isBond(h)? fmtPct(h.couponRate,3) : "-"}</td>
+      <td class="num">${fmtNum(h.pricePct,2)}</td>
+      <td class="num">${fmtInt(h.quantity)}</td>
+      <td class="num">${fmtInt(purchaseAmountLocal(h))}</td>
+      <td class="num">${fmtInt(purchaseAmountKRW(h))}</td>
+      <td>
+        <button class="icon-btn" title="편집" onclick="openEdit('${h.id}')">✎</button>
+        <button class="icon-btn" title="삭제" onclick="deleteHolding('${h.id}')">✕</button>
+      </td>
+    </tr>`).join("");
+
+  return `
+    <div class="topbar">
+      <div><h2>보유자산목록</h2><div class="sub">CMA · ISA · IRP · IMA 전 계좌 통합 자산 마스터</div></div>
+      <button class="btn accent" onclick="openAdd()">+ 자산 추가</button>
+    </div>
+    <div class="note">채권은 매수단가를 <b>액면 100 기준 가격(%)</b>으로 입력하세요. (예: 국내채권 시장관행 단가 9,207원(액면 10,000당) → 92.07 / 해외채권 Dirty Price 114.95 → 그대로 입력) ETF·IMA는 좌당(또는 1단위) 가격을 입력합니다. '과세구분'은 금융소득(이자소득) 합산 판단에 사용되니 계좌 성격에 맞게 확인하세요.</div>
+    <div class="card">
+      <div class="scrollx"><table>
+        <thead><tr>
+          <th class="l">계좌</th><th class="l">자산유형</th><th class="l">종목명</th><th class="l">과세구분</th><th>통화</th>
+          <th>매수결제일</th><th>만기일</th><th>표면이율</th><th>매수단가</th><th>수량</th>
+          <th>매수금액(현지)</th><th>매수금액(KRW)</th><th>관리</th>
+        </tr></thead>
+        <tbody>${rows || `<tr><td colspan="13" class="empty">등록된 자산이 없습니다. '자산 추가'로 시작하세요.</td></tr>`}</tbody>
+      </table></div>
+    </div>
+  `;
+}
+
+function holdingForm(h){
+  const isNew = !h;
+  const v = h || {
+    account:"CMA", assetType:"국내채권", name:"", rating:"", currency:"KRW",
+    issueDate:"", maturityDate:"", couponRate:0, cycleMonths:6, settlementDate:"",
+    firstCouponDate:"", pricePct:100, quantity:100000000, fxRate:1, taxRate:0.154,
+    currentPrice:"", note:""
+  };
+  const bond = BOND_TYPES.includes(v.assetType);
+  return `
+    <div class="overlay" id="modalOverlay">
+      <div class="modal">
+        <h3>${isNew? "자산 추가" : "자산 편집"}</h3>
+        <div class="desc">계좌·자산유형에 따라 필요한 입력 항목이 달라집니다.</div>
+        <div class="field-row">
+          <div class="field"><label>계좌구분</label>
+            <select id="f_account" onchange="suggestTaxCategory()">${ACCOUNTS.map(a=>`<option value="${a}" ${v.account===a?'selected':''}>${a}</option>`).join("")}</select>
+          </div>
+          <div class="field"><label>자산유형</label>
+            <select id="f_assetType" onchange="toggleBondFields()">${TYPES.map(t=>`<option value="${t}" ${v.assetType===t?'selected':''}>${t}</option>`).join("")}</select>
+          </div>
+        </div>
+        <div class="field"><label>종목명</label><input type="text" id="f_name" value="${v.name}"></div>
+        <div class="field-row">
+          <div class="field"><label>신용등급</label><input type="text" id="f_rating" value="${v.rating||''}"></div>
+          <div class="field"><label>통화</label><input type="text" id="f_currency" value="${v.currency}"></div>
+        </div>
+        <div id="bondFieldsA" style="${bond?'':'display:none'}">
+          <div class="field-row">
+            <div class="field"><label>발행일</label><input type="date" id="f_issueDate" value="${v.issueDate||''}"></div>
+            <div class="field"><label>만기일</label><input type="date" id="f_maturityDate" value="${v.maturityDate||''}"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label>표면이율(%) 예:1.479</label><input type="number" step="0.0001" id="f_couponRate" value="${(v.couponRate*100)||0}"></div>
+            <div class="field"><label>이자지급주기(개월)</label><input type="number" id="f_cycleMonths" value="${v.cycleMonths||6}"></div>
+          </div>
+          <div class="field"><label>최초이자지급일</label><input type="date" id="f_firstCouponDate" value="${v.firstCouponDate||''}"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>매수결제일</label><input type="date" id="f_settlementDate" value="${v.settlementDate||''}"></div>
+          <div class="field"><label id="priceLabel">${bond? "매수단가(%, 액면100기준)" : "매수단가(현지통화/좌)"}</label>
+            <input type="number" step="0.01" id="f_pricePct" value="${v.pricePct}"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label id="qtyLabel">${bond? "매수수량(액면금액)" : "매수수량(좌수)"}</label>
+            <input type="number" id="f_quantity" value="${v.quantity}"></div>
+          <div class="field"><label>매수시 환율(KRW/외화1단위, KRW자산=1)</label><input type="number" step="0.01" id="f_fxRate" value="${v.fxRate}"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>세율(%) 예:15.4</label><input type="number" step="0.01" id="f_taxRate" value="${(v.taxRate*100)||0}"></div>
+          <div class="field"><label>현재가/평가단가 (ETF·IMA 평가용, 선택)</label><input type="number" step="0.01" id="f_currentPrice" value="${v.currentPrice===null?'':v.currentPrice}"></div>
+        </div>
+        <div class="field">
+          <label>과세구분 (금융소득 합산 판단용)</label>
+          <select id="f_taxCategory">${TAX_CATS.map(t=>`<option value="${t}" ${v.taxCategory===t?'selected':''}>${t}</option>`).join("")}</select>
+        </div>
+        <div class="field"><label>비고</label><input type="text" id="f_note" value="${v.note||''}"></div>
+        <div class="modal-actions">
+          <button class="btn outline" onclick="closeModal()">취소</button>
+          <button class="btn accent" onclick="saveHolding('${isNew?'':v.id}')">저장</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function toggleBondFields(){
+  const t = document.getElementById("f_assetType").value;
+  const bond = BOND_TYPES.includes(t);
+  document.getElementById("bondFieldsA").style.display = bond ? "" : "none";
+  document.getElementById("priceLabel").textContent = bond? "매수단가(%, 액면100기준)" : "매수단가(현지통화/좌)";
+  document.getElementById("qtyLabel").textContent = bond? "매수수량(액면금액)" : "매수수량(좌수)";
+}
+function suggestTaxCategory(){
+  const acct = document.getElementById("f_account").value;
+  const sel = document.getElementById("f_taxCategory");
+  if(sel) sel.value = defaultTaxCategory(acct);
+}
+function openAdd(){
+  document.body.insertAdjacentHTML("beforeend", holdingForm(null));
+}
+function openEdit(id){
+  const h = holdings.find(x=>x.id===id);
+  document.body.insertAdjacentHTML("beforeend", holdingForm(h));
+}
+function closeModal(){
+  const o = document.getElementById("modalOverlay");
+  if(o) o.remove();
+}
+function saveHolding(id){
+  const val = (sel)=> document.getElementById(sel).value;
+  const data = {
+    account: val("f_account"),
+    assetType: val("f_assetType"),
+    name: val("f_name") || "(이름 없음)",
+    rating: val("f_rating"),
+    currency: val("f_currency") || "KRW",
+    issueDate: val("f_issueDate") || null,
+    maturityDate: val("f_maturityDate") || null,
+    couponRate: (parseFloat(val("f_couponRate"))||0)/100,
+    cycleMonths: parseInt(val("f_cycleMonths"))||0,
+    settlementDate: val("f_settlementDate") || null,
+    firstCouponDate: val("f_firstCouponDate") || null,
+    pricePct: parseFloat(val("f_pricePct"))||0,
+    quantity: parseFloat(val("f_quantity"))||0,
+    fxRate: parseFloat(val("f_fxRate"))||1,
+    taxRate: (parseFloat(val("f_taxRate"))||0)/100,
+    currentPrice: val("f_currentPrice")===""? null : parseFloat(val("f_currentPrice")),
+    taxCategory: val("f_taxCategory") || "과세",
+    note: val("f_note")
+  };
+  if(id){
+    const idx = holdings.findIndex(x=>x.id===id);
+    holdings[idx] = {...holdings[idx], ...data};
+  } else {
+    holdings.push({ id: uid(), ...data });
+  }
+  closeModal();
+  render();
+}
+function deleteHolding(id){
+  if(!confirm("이 자산을 목록에서 삭제할까요?")) return;
+  holdings = holdings.filter(x=>x.id!==id);
+  render();
+}
+
+/* ============================================================
+   채권현금흐름 (Bond detail)
+============================================================ */
+function bondHTML(){
+  const bonds = holdings.filter(isBond);
+  if(bonds.length===0){
+    return `<div class="topbar"><div><h2>채권현금흐름</h2><div class="sub">국내채권 · 해외채권 공통 양식</div></div></div>
+      <div class="card"><div class="empty">등록된 채권이 없습니다. '보유자산목록'에서 채권을 추가하세요.</div></div>`;
+  }
+  if(!selectedBondId || !bonds.find(b=>b.id===selectedBondId)) selectedBondId = bonds[0].id;
+  const h = bonds.find(b=>b.id===selectedBondId);
+  const s = bondSummary(h);
+
+  const rows = s.schedule.map(r=>`
+    <tr>
+      <td class="num">${r.no}</td>
+      <td>${r.date}</td>
+      <td class="num">${fmtInt(r.grossInterest)}</td>
+      <td class="num">${fmtInt(r.holdInterest)}</td>
+      <td class="num">${fmtInt(r.taxAmt)}</td>
+      <td class="num">${fmtInt(r.netInterest)}</td>
+      <td class="num">${fmtInt(r.principal)}</td>
+      <td class="num">${fmtInt(r.cashLocal)}</td>
+      <td class="num">${fmtInt(r.cashKRW)}</td>
+      <td class="num">${fmtInt(r.cumKRW)}</td>
+      <td class="num ${pnlClass(r.pnl)}">${fmtInt(r.pnl)}</td>
+      <td class="num ${pnlClass(r.ret)}">${fmtPct(r.ret)}</td>
+    </tr>`).join("");
+
+  return `
+    <div class="topbar">
+      <div><h2>채권현금흐름</h2><div class="sub">매수부터 만기까지 이자지급일별 세전이자 → 세금 → 세후수령액 → 누적손익</div></div>
+    </div>
+    <div class="bond-select">
+      <select onchange="selectedBondId=this.value; renderMain();">
+        ${bonds.map(b=>`<option value="${b.id}" ${b.id===h.id?'selected':''}>[${b.account}] ${b.name} (${b.currency})</option>`).join("")}
+      </select>
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="lbl">투자원금(KRW)</div><div class="val num">${fmtInt(s.purchaseKRW)}</div><div class="sub">현지통화 ${fmtInt(s.purchaseLocal)} ${h.currency}</div></div>
+      <div class="kpi"><div class="lbl">만기예상 총손익(세후, KRW)</div><div class="val num ${pnlClass(s.totalPnlKRW)}">${fmtInt(s.totalPnlKRW)}</div><div class="sub">최종 누적수익률 ${fmtPct(s.finalReturn)}</div></div>
+      <div class="kpi"><div class="lbl">세후연평균수익률(단순)</div><div class="val num">${fmtPct(s.simpleAnnualReturn)}</div><div class="sub">투자기간 ${s.years.toFixed(2)}년</div></div>
+      <div class="kpi"><div class="lbl">이자지급 횟수</div><div class="val">${s.schedule.length}회</div><div class="sub">주기 ${h.cycleMonths}개월 · 세율 ${fmtPct(h.taxRate)}</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>누적손익(세후) 추이 <span class="muted">KRW 환산, 환율은 매수시 환율로 고정 가정</span></h3>
+      <div class="chart-wrap" id="chartBondPnl"></div>
+    </div>
+    <div class="card">
+      <h3>이자지급일별 현금흐름 상세</h3>
+      <div class="scrollx"><table>
+        <thead><tr>
+          <th>No</th><th class="l">이자지급일</th><th>총이자(현지)</th><th>보유기간이자(현지)</th><th>세금(현지)</th>
+          <th>세후실수령액(현지)</th><th>원금상환(현지)</th><th>세후현금흐름(현지)</th><th>세후현금흐름(KRW)</th>
+          <th>누적현금흐름(KRW)</th><th>누적손익(KRW)</th><th>누적수익률</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table></div>
+    </div>
+    <input type="hidden" id="__bondChartData" value='${JSON.stringify(s.schedule.map(r=>({d:r.date,p:r.pnl})))}'>
+  `;
+}
+function drawBondChart(){
+  const el = document.getElementById("__bondChartData");
+  const wrap = document.getElementById("chartBondPnl");
+  if(!el || !wrap) return;
+  const data = JSON.parse(el.value);
+  wrap.innerHTML = lineChartSVG(data.map(d=>({label:d.d, value:d.p})), {color:"#C9962C"});
+}
+
+/* ============================================================
+   ETF / IMA 현황
+============================================================ */
+function etfHTML(){
+  const list = holdings.filter(h=>!isBond(h));
+  const rows = list.map(h=>{
+    const s = etfSummary(h);
+    return `<tr>
+      <td class="l"><span class="tag ${h.account}">${h.account}</span></td>
+      <td class="l"><span class="tag type">${h.assetType}</span></td>
+      <td class="l">${h.name}</td>
+      <td>${h.currency}</td>
+      <td class="num">${fmtInt(h.quantity)}</td>
+      <td class="num">${fmtNum(h.pricePct,2)}</td>
+      <td class="num">${fmtInt(s.purchaseKRW)}</td>
+      <td><input type="number" step="0.01" style="width:110px;text-align:right" value="${h.currentPrice===null?'':h.currentPrice}"
+            onchange="updateCurrentPrice('${h.id}', this.value)"></td>
+      <td class="num">${s.evalKRW===null?'-':fmtInt(s.evalKRW)}</td>
+      <td class="num ${pnlClass(s.pnl)}">${s.pnl===null?'-':fmtInt(s.pnl)}</td>
+      <td class="num ${pnlClass(s.ret)}">${s.ret===null?'-':fmtPct(s.ret)}</td>
+    </tr>`;
+  }).join("");
+  return `
+    <div class="topbar">
+      <div><h2>ETF · IMA현황</h2><div class="sub">자동 시세조회 없음 - 현재가/평가단가를 직접 입력하세요</div></div>
+    </div>
+    <div class="note">채권이 아닌 ETF·구조화상품(IMA)은 정형화된 쿠폰 스케줄이 없어 현재가를 입력해 평가손익을 계산합니다.</div>
+    <div class="card">
+      <div class="scrollx"><table>
+        <thead><tr>
+          <th class="l">계좌</th><th class="l">유형</th><th class="l">종목명</th><th>통화</th>
+          <th>수량</th><th>매수단가</th><th>매수금액(KRW)</th><th>현재가 입력</th>
+          <th>평가금액(KRW)</th><th>평가손익(KRW)</th><th>평가수익률</th>
+        </tr></thead>
+        <tbody>${rows || `<tr><td colspan="11" class="empty">등록된 ETF·IMA 자산이 없습니다.</td></tr>`}</tbody>
+      </table></div>
+    </div>
+  `;
+}
+function updateCurrentPrice(id, value){
+  const idx = holdings.findIndex(h=>h.id===id);
+  holdings[idx].currentPrice = value===""? null : parseFloat(value);
+  renderMain();
+}
+
+/* ============================================================
+   세금 · 건보료 분석
+============================================================ */
+function taxHTML(){
+  const rows = annualIncomeAnalysis();
+  const acctColors = {"과세":"#D6455A","비과세":"#1E8A56","과세이연":"#B4720C"};
+
+  const tableRows = rows.map(r=>{
+    const status = incomeStatus(r["과세"]);
+    const pct = Math.min(r["과세"]/COMPREHENSIVE_TAX_THRESHOLD*100, 100);
+    return `<tr>
+      <td class="l"><b>${r.year}</b></td>
+      <td class="num">${fmtInt(r["과세"])}</td>
+      <td class="num">${fmtInt(r["비과세"])}</td>
+      <td class="num">${fmtInt(r["과세이연"])}</td>
+      <td class="l"><span class="status-pill ${status.cls}">${status.label}</span></td>
+    </tr>`;
+  }).join("");
+
+  const barSeries = {
+    "과세": rows.map(r=>r["과세"]),
+    "비과세": rows.map(r=>r["비과세"]),
+    "과세이연": rows.map(r=>r["과세이연"])
+  };
+  const maxTaxable = rows.length? Math.max(...rows.map(r=>r["과세"])) : 0;
+  const overallStatus = incomeStatus(maxTaxable);
+
+  return `
+    <div class="topbar">
+      <div><h2>세금 · 건보료 분석</h2><div class="sub">연도별 과세 / 비과세 / 과세이연 이자소득(세전) 및 건강보험료·종합소득세 영향 판단</div></div>
+    </div>
+    <div class="note">
+      과세구분은 '보유자산목록'에서 각 자산별로 설정합니다. 일반적으로 <b>CMA·IMA는 과세</b>(이자소득세 원천징수 후 분리과세, 연 2,000만원 초과 시 종합과세),
+      <b>ISA는 비과세</b>(순소득 한도 내, 초과분은 9.9% 분리과세로 종합과세 제외), <b>IRP는 과세이연</b>(인출 전까지 당해연도 금융소득에 미산입, 인출 시 저율의 연금소득세 등 별도 과세)로 분류합니다.
+      본 분석은 이 앱에 등록된 채권만 반영하므로, 실제 판정 시에는 다른 금융기관 보유분까지 합산해야 합니다.
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>연도별 과세대상 금융소득 vs 기준선 <span class="muted">단위: 원</span></h3>
+      ${stackedBarSVG(rows.map(r=>r.year), barSeries, acctColors, {
+        refLine1:HEALTH_INS_THRESHOLD, refLine1Label:"건보료 기준 1,000만원",
+        refLine2:COMPREHENSIVE_TAX_THRESHOLD, refLine2Label:"종합과세 기준 2,000만원"
+      })}
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>연도별 상세</h3>
+      <div class="scrollx"><table>
+        <thead><tr><th class="l">연도</th><th>과세대상(세전,KRW)</th><th>비과세(세전,KRW)</th><th>과세이연(세전,KRW)</th><th class="l">판정</th></tr></thead>
+        <tbody>${tableRows || `<tr><td colspan="5" class="empty">등록된 채권이 없습니다.</td></tr>`}</tbody>
+      </table></div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>건강보험료 관점</h3>
+        <p style="font-size:12.5px;line-height:1.8;color:#3A4250;">
+          국민건강보험법령상 이자·배당 등 금융소득이 연 <b>1,000만원을 초과</b>하면 그 초과금액이 건강보험료 부과대상 소득(보수외소득)에 산입됩니다.
+          피부양자로 등록되어 있는 경우 금융소득이 연 <b>2,000만원을 초과</b>하면 피부양자 자격을 상실하여 지역가입자로 전환될 수 있으므로 특히 유의해야 합니다.
+        </p>
+        <div class="status-pill ${overallStatus.cls}" style="margin-top:6px;">현재 최대 연도 기준: ${overallStatus.label}</div>
+      </div>
+      <div class="card">
+        <h3>종합소득세 관점</h3>
+        <p style="font-size:12.5px;line-height:1.8;color:#3A4250;">
+          금융소득(이자+배당) 합계가 연 <b>2,000만원을 초과</b>하면, 초과분이 아니라 이자·배당소득 <b>전액</b>이 다른 종합소득(근로·사업소득 등)과 합산되어
+          6.6%~49.5%(지방소득세 포함)의 누진세율로 종합소득세를 신고·납부해야 합니다(이미 원천징수된 세액은 기납부세액으로 공제).
+          2,000만원 이하이면 원천징수(통상 15.4%)로 납세의무가 종결되는 분리과세 대상으로 별도의 종합소득세 신고 의무가 없습니다.
+        </p>
+      </div>
+    </div>
+  `;
+}
+
+/* ============================================================
+   월별현금흐름 (이자를 이자발생월 다음 달부터 안분)
+============================================================ */
+function earliestSettlementYM(){
+  const bonds = holdings.filter(isBond).filter(h=>h.settlementDate);
+  if(bonds.length===0){ const t=new Date(); return {y:t.getFullYear(), m:t.getMonth()+1}; }
+  const dates = bonds.map(h=>new Date(h.settlementDate+"T00:00:00"));
+  const min = new Date(Math.min(...dates));
+  return {y:min.getFullYear(), m:min.getMonth()+1};
+}
+
+function monthlyHTML(){
+  if(!monthlyStartYM){
+    const e = earliestSettlementYM();
+    monthlyStartYM = ymKey(e.y, e.m);
+  }
+  const [sy, sm] = monthlyStartYM.split("-").map(Number);
+  const matrix = buildMonthlyMatrix(sy, sm, monthlyCount);
+  const acctColors = {"과세":"#D6455A","비과세":"#1E8A56","과세이연":"#B4720C"};
+
+  const bondRows = matrix.perBond.map(pb=>`
+    <tr>
+      <td class="l sticky">
+        <span class="tag ${pb.holding.account}">${pb.holding.account}</span>
+        <span class="tag tax-${pb.holding.taxCategory}">${pb.holding.taxCategory}</span><br>
+        <span style="font-weight:700;">${pb.holding.name}</span>
+      </td>
+      ${pb.net.map(v=>`<td class="num">${v===0?'-':fmtInt(v)}</td>`).join("")}
+    </tr>`).join("");
+
+  const principalRow = `<tr class="subtotal">
+      <td class="l sticky">원금상환 (실제 해당월, 안분 아님)</td>
+      ${matrix.totalPrincipal.map(v=>`<td class="num">${v===0?'-':fmtInt(v)}</td>`).join("")}
+    </tr>`;
+  const totalRow = `<tr class="subtotal">
+      <td class="l sticky">이자 합계(세후, 안분)</td>
+      ${matrix.totalNet.map(v=>`<td class="num">${v===0?'-':fmtInt(v)}</td>`).join("")}
+    </tr>`;
+  const catRows = ["과세","비과세","과세이연"].map(cat=>`
+    <tr class="subtotal">
+      <td class="l sticky">└ ${cat} 소계</td>
+      ${matrix.totalsByCategory[cat].map(v=>`<td class="num">${v===0?'-':fmtInt(v)}</td>`).join("")}
+    </tr>`).join("");
+
+  return `
+    <div class="topbar">
+      <div><h2>월별현금흐름</h2><div class="sub">이자는 이자발생(확정)월 다음 달부터 이자지급주기 개월 수만큼 균등 안분하여 표시 (세후, KRW 환산)</div></div>
+    </div>
+    <div class="note">
+      예) 6개월마다 이자가 지급되는 채권이 2026-09에 이자가 확정되면, 실제 현금흐름 체감을 위해 그 금액을 2026-10부터 2027-03까지 6개월간 균등하게 나누어 표시합니다.
+      원금상환은 안분하지 않고 실제 상환월에 전액 표시합니다.
+    </div>
+    <div class="controls-row">
+      <div class="field"><label>시작월</label>
+        <input type="month" value="${monthlyStartYM}" onchange="monthlyStartYM=this.value; renderMain();">
+      </div>
+      <div class="field"><label>표시 개월 수</label>
+        <select onchange="monthlyCount=parseInt(this.value); renderMain();">
+          ${[12,24,36,60,120].map(n=>`<option value="${n}" ${monthlyCount===n?'selected':''}>${n}개월</option>`).join("")}
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <h3>채권별 월별 세후 이자현금흐름 <span class="muted">${matrix.months[0]} ~ ${matrix.months[matrix.months.length-1]}</span></h3>
+      <div class="scrollx"><table class="month-table">
+        <thead><tr>
+          <th class="l sticky">종목명</th>
+          ${matrix.months.map(m=>`<th>${m}</th>`).join("")}
+        </tr></thead>
+        <tbody>
+          ${bondRows || `<tr><td class="l sticky">등록된 채권 없음</td></tr>`}
+          ${totalRow}
+          ${catRows}
+          ${principalRow}
+        </tbody>
+      </table></div>
+    </div>
+  `;
+}
+
+function helpHTML(){
+  return `
+    <div class="topbar"><div><h2>사용법</h2><div class="sub">다계좌 · 다채권 포트폴리오 손익 관리</div></div></div>
+    <div class="card help">
+      <h4>화면 구성</h4>
+      <ul>
+        <li><b>종합현황</b> — 전 계좌 · 전 자산의 투자금액과 손익을 계좌별 · 자산유형별 · 과세구분별 · 시간흐름별로 한 화면에서 확인하는 대시보드</li>
+        <li><b>보유자산목록</b> — CMA · ISA · IRP · IMA 전 계좌 자산을 등록/편집/삭제하고 과세구분을 지정하는 마스터 목록</li>
+        <li><b>채권현금흐름</b> — 국내채권 · 해외채권 공통 양식. 채권을 선택하면 매수~만기 현금흐름과 누적손익이 자동 계산됩니다</li>
+        <li><b>ETF · IMA현황</b> — 채권이 아닌 자산은 현재가를 직접 입력해 평가손익을 확인합니다</li>
+        <li><b>세금 · 건보료</b> — 연도별 과세/비과세/과세이연 이자소득을 집계하여 건강보험료(1,000만원)·금융소득종합과세(2,000만원) 기준과 비교합니다</li>
+        <li><b>월별현금흐름</b> — 채권 이자를 이자발생월 다음 달부터 균등 안분한 실제 월별 현금흐름표</li>
+      </ul>
+      <h4>입력 규칙</h4>
+      <ul>
+        <li>채권의 매수단가는 반드시 <b>액면 100 기준 가격(%)</b>으로 입력하세요.
+          예) 국내채권 시장관행 단가 9,207원(액면 10,000당) → <b>92.07</b>로 환산 / 해외채권 Dirty Price 114.95(액면100당) → <b>114.95</b> 그대로</li>
+        <li>외화 채권은 통화(USD/BRL 등)와 매수시 환율(KRW 기준)을 입력하면 KRW 환산 금액이 자동 계산됩니다.</li>
+        <li>ETF · IMA는 매수단가에 좌당(또는 1단위) 가격을, 수량에 좌수(또는 1)를 입력합니다.</li>
+        <li><b>과세구분</b>은 계좌 선택 시 CMA·IMA=과세, ISA=비과세, IRP=과세이연으로 자동 제안되며, 필요시 직접 변경할 수 있습니다.</li>
+      </ul>
+      <h4>세금 · 건보료 판단 기준 (요약)</h4>
+      <ul>
+        <li>연간 <b>과세대상</b> 이자소득(세전) 합계가 <b>1,000만원 초과</b> → 건강보험료 부과대상 소득(보수외소득)에 초과분이 산입되어 건보료 부담이 증가할 수 있습니다.</li>
+        <li>연간 <b>과세대상</b> 이자소득(세전) 합계가 <b>2,000만원 초과</b> → 금융소득종합과세 대상이 되어 이자소득 전액이 다른 종합소득과 합산, 누진세율(6.6%~49.5%, 지방소득세 포함)로 종합소득세를 신고해야 합니다.
+          아울러 건강보험 피부양자 자격을 상실할 수 있습니다.</li>
+        <li>비과세(ISA 한도 내)·과세이연(IRP)은 위 두 기준 판단 시 제외됩니다.</li>
+      </ul>
+      <h4>월별현금흐름 안분 규칙</h4>
+      <p>채권 이자는 지급주기(3·6·12개월 등)마다 목돈으로 들어오지만, 체감 현금흐름을 매끄럽게 보기 위해 <b>이자가 확정(지급)된 달의 다음 달부터</b> 지급주기 개월 수만큼
+        <b>균등 안분</b>하여 월별로 표시합니다. 예) 6개월마다 이자가 나오는 채권이 9월에 확정되면 → 10월부터 이듬해 3월까지 6개월간 나누어 표시.
+        원금상환은 안분하지 않고 실제 상환월에 그대로 표시합니다.</p>
+      <h4>계산 방식과 한계</h4>
+      <ul>
+        <li>채권 이자지급일은 최초이자지급일부터 이자지급주기(개월)만큼 자동으로 생성되며, 매수 후 첫 이자기간만 Actual/365 방식으로 일할계산합니다.</li>
+        <li>외화채권의 향후 현금흐름은 매수시 환율로 고정 환산한 값입니다 (환율 변동은 반영하지 않는 단순 가정).</li>
+        <li>실제 영업일 조정, 세금 원천징수 방식, 중도 환매, ISA 순소득 한도 계산 등은 단순화되어 있으며, 이 앱은 세무·재무 자문을 대체하지 않는 시뮬레이션 도구입니다.</li>
+      </ul>
+      <h4>데이터 저장</h4>
+      <ul>
+        <li>이 앱은 브라우저를 새로고침하면 입력한 데이터가 초기화됩니다. 왼쪽 하단의 <b>JSON 내보내기</b>로 현재 데이터를 파일로 저장하고,
+          다음에 접속할 때 <b>JSON 가져오기</b>로 불러오세요.</li>
+        <li>'예시 데이터로 초기화'를 누르면 최초 예시 11건으로 되돌아갑니다.</li>
+      </ul>
+      <h4>예시 데이터 안내</h4>
+      <p>한전채(한국전력공사채권1022) · KT채(KT193-3) · 브라질국채(USD, Brazil 8 1/4 01/20/34)는 실제 매매계산서 수치를 예시로 넣었습니다.
+        그 외(국고채, 대한항공채, 브라질국채 BRL, ETF, IMA)는 구조 설명용 가상의 예시 값이니 반드시 실제 보유조건으로 교체하세요.</p>
+    </div>
+  `;
+}
+
+/* ============================================================
+   IMPORT / EXPORT / RESET
+============================================================ */
+function exportData(){
+  const blob = new Blob([JSON.stringify(holdings, null, 2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "채권포트폴리오_데이터.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+function importData(evt){
+  const file = evt.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      const data = JSON.parse(e.target.result);
+      if(!Array.isArray(data)) throw new Error("형식 오류");
+      holdings = data;
+      uidCounter = 1;
+      holdings.forEach(h=>{ if(!h.id) h.id = uid(); });
+      selectedBondId = null;
+      render();
+      alert("데이터를 불러왔습니다.");
+    }catch(err){
+      alert("파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인하세요.");
+    }
+  };
+  reader.readAsText(file);
+  evt.target.value = "";
+}
+function resetData(){
+  if(!confirm("현재 입력한 데이터가 모두 사라지고 예시 데이터로 초기화됩니다. 계속할까요?")) return;
+  uidCounter = 1;
+  holdings = seedHoldings();
+  selectedBondId = null;
+  render();
+}
+
+/* ============================================================
+   DEPENDENCY-FREE CHARTS (pure SVG / CSS, no external libraries)
+============================================================ */
+function fmtCompact(n){
+  const sign = n<0 ? "-" : "";
+  const abs = Math.abs(n);
+  if(abs>=100000000) return sign + (abs/100000000).toFixed(1) + "억";
+  if(abs>=10000) return sign + (abs/10000).toFixed(0) + "만";
+  return sign + Math.round(abs).toString();
+}
+
+function barChartSVG(items, opts={}){
+  const W=500, H=230, padL=54, padR=14, padT=16, padB=34;
+  if(!items.length || items.every(d=>d.value===0)){
+    return `<div class="empty">표시할 데이터가 없습니다.</div>`;
+  }
+  const max = Math.max(...items.map(d=>d.value), 1);
+  const innerW = W-padL-padR, innerH = H-padT-padB;
+  const n = items.length;
+  const gap = innerW*0.18/(n+1);
+  const barW = (innerW - gap*(n+1))/n;
+  let grid="", bars="", labels="";
+  const steps=4;
+  for(let i=0;i<=steps;i++){
+    const val = max*i/steps;
+    const y = padT+innerH-(val/max)*innerH;
+    grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#EEF0F4" stroke-width="1"/>`;
+    grid += `<text x="${padL-8}" y="${(y+3).toFixed(1)}" font-size="9.5" fill="#8A94A3" text-anchor="end">${fmtCompact(val)}</text>`;
+  }
+  items.forEach((d,i)=>{
+    const x = padL+gap+i*(barW+gap);
+    const h = Math.max((d.value/max)*innerH, 0);
+    const y = padT+innerH-h;
+    bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="5" fill="${d.color}"/>`;
+    bars += `<text x="${(x+barW/2).toFixed(1)}" y="${(y-6).toFixed(1)}" font-size="10" fill="#48505C" text-anchor="middle">${fmtCompact(d.value)}</text>`;
+    labels += `<text x="${(x+barW/2).toFixed(1)}" y="${H-12}" font-size="11" fill="#2B3444" text-anchor="middle" font-weight="700">${d.label}</text>`;
+  });
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">
+    ${grid}${bars}${labels}
+  </svg>`;
+}
+
+function donutChartHTML(items){
+  const total = items.reduce((s,d)=>s+d.value,0);
+  let acc=0;
+  const stops = items.filter(d=>d.value>0).map(d=>{
+    const pct = total>0 ? d.value/total*100 : 0;
+    const start=acc; acc+=pct;
+    return `${d.color} ${start.toFixed(2)}% ${acc.toFixed(2)}%`;
+  }).join(", ");
+  const legend = items.map(d=>{
+    const pct = total>0 ? (d.value/total*100).toFixed(1) : "0.0";
+    return `<div class="row"><span><span class="dot" style="background:${d.color}"></span>${d.label}</span><span class="num">${pct}%</span></div>`;
+  }).join("");
+  return `
+    <div style="display:flex;align-items:center;gap:22px;height:100%;">
+      <div style="position:relative;width:140px;height:140px;flex-shrink:0;">
+        <div style="width:140px;height:140px;border-radius:50%;background:conic-gradient(${stops || "#E4E7EC 0% 100%"});"></div>
+        <div style="position:absolute;inset:24px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;
+          font-size:11px;color:var(--muted);text-align:center;line-height:1.4;">총액<br><b style="color:var(--text);font-size:12px;">${fmtCompact(total)}</b></div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;gap:9px;font-size:12.5px;min-width:0;">${legend}</div>
+    </div>`;
+}
+
+function lineChartSVG(points, opts={}){
+  const W=680, H=260, padL=56, padR=18, padT=18, padB=30;
+  const color = opts.color || "#C9962C";
+  if(!points.length) return `<div class="empty">표시할 데이터가 없습니다.</div>`;
+  const values = points.map(p=>p.value);
+  let min = Math.min(0, ...values);
+  let max = Math.max(0, ...values);
+  if(min===max){ min-=1; max+=1; }
+  const rangeY = max-min;
+  const innerW = W-padL-padR, innerH = H-padT-padB;
+  const stepX = points.length>1 ? innerW/(points.length-1) : 0;
+  const xy = points.map((p,i)=>{
+    const x = padL + i*stepX;
+    const y = padT + innerH - ((p.value-min)/rangeY)*innerH;
+    return [x,y];
+  });
+  const linePath = xy.map((pt,i)=> (i===0?"M":"L")+pt[0].toFixed(1)+","+pt[1].toFixed(1)).join(" ");
+  const baseY = (padT+innerH).toFixed(1);
+  const areaPath = `${linePath} L ${xy[xy.length-1][0].toFixed(1)},${baseY} L ${xy[0][0].toFixed(1)},${baseY} Z`;
+  const zeroY = padT + innerH - ((0-min)/rangeY)*innerH;
+
+  let grid="";
+  const steps=4;
+  for(let i=0;i<=steps;i++){
+    const val = min + (rangeY*i/steps);
+    const y = padT+innerH-((val-min)/rangeY)*innerH;
+    grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#EEF0F4" stroke-width="1"/>`;
+    grid += `<text x="${padL-8}" y="${(y+3).toFixed(1)}" font-size="9.5" fill="#8A94A3" text-anchor="end">${fmtCompact(val)}</text>`;
+  }
+  const zeroLine = `<line x1="${padL}" y1="${zeroY.toFixed(1)}" x2="${W-padR}" y2="${zeroY.toFixed(1)}" stroke="#C7CCD6" stroke-width="1" stroke-dasharray="3,3"/>`;
+
+  let xLabels = "";
+  const labelIdxs = points.length<=6 ? points.map((_,i)=>i) : [0, Math.floor((points.length-1)/2), points.length-1];
+  labelIdxs.forEach(i=>{
+    xLabels += `<text x="${xy[i][0].toFixed(1)}" y="${H-8}" font-size="9.5" fill="#8A94A3" text-anchor="middle">${points[i].label}</text>`;
+  });
+  const dots = xy.map(([x,y])=>`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="2.8" fill="#0F1B33"/>`).join("");
+
+  return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:100%">
+    ${grid}${zeroLine}
+    <path d="${areaPath}" fill="${color}" fill-opacity="0.14"/>
+    <path d="${linePath}" fill="none" stroke="${color}" stroke-width="2.4"/>
+    ${dots}
+    ${xLabels}
+  </svg>`;
+}
+
+function stackedBarSVG(labels, series, colors, opts={}){
+  // series: {seriesName: [values...]} aligned to labels
+  const W=680, H=280, padL=60, padR=16, padT=40, padB=34;
+  const seriesNames = Object.keys(series);
+  const totals = labels.map((_,i)=> seriesNames.reduce((s,k)=>s+(series[k][i]||0),0));
+  const max = Math.max(...totals, opts.refLine2 || 0, 1) * 1.08;
+  const innerW = W-padL-padR, innerH = H-padT-padB;
+  const n = labels.length;
+  const gap = innerW*0.2/(n+1);
+  const barW = (innerW - gap*(n+1))/n;
+  let grid="", bars="", xlabels="";
+  const steps=4;
+  for(let i=0;i<=steps;i++){
+    const val = max*i/steps;
+    const y = padT+innerH-(val/max)*innerH;
+    grid += `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="#EEF0F4" stroke-width="1"/>`;
+    grid += `<text x="${padL-8}" y="${(y+3).toFixed(1)}" font-size="9.5" fill="#8A94A3" text-anchor="end">${fmtCompact(val)}</text>`;
+  }
+  labels.forEach((lab,i)=>{
+    const x = padL+gap+i*(barW+gap);
+    let yCursor = padT+innerH;
+    seriesNames.forEach(sn=>{
+      const v = series[sn][i]||0;
+      const h = (v/max)*innerH;
+      yCursor -= h;
+      bars += `<rect x="${x.toFixed(1)}" y="${yCursor.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" fill="${colors[sn]}"/>`;
+    });
+    xlabels += `<text x="${(x+barW/2).toFixed(1)}" y="${H-12}" font-size="11" fill="#2B3444" text-anchor="middle" font-weight="700">${lab}</text>`;
+  });
+  function refLine(val, label, color){
+    if(!val || val>max) return "";
+    const y = padT+innerH-(val/max)*innerH;
+    return `<line x1="${padL}" y1="${y.toFixed(1)}" x2="${W-padR}" y2="${y.toFixed(1)}" stroke="${color}" stroke-width="1.4" stroke-dasharray="5,4"/>
+      <text x="${W-padR}" y="${(y-4).toFixed(1)}" font-size="10" fill="${color}" text-anchor="end" font-weight="700">${label}</text>`;
+  }
+  const ref1 = refLine(opts.refLine1, opts.refLine1Label, "#B4720C");
+  const ref2 = refLine(opts.refLine2, opts.refLine2Label, "#D6455A");
+  const legend = seriesNames.map(sn=>`<span style="display:inline-flex;align-items:center;gap:5px;margin-right:14px;">
+      <span style="width:9px;height:9px;border-radius:2px;background:${colors[sn]};display:inline-block;"></span>${sn}</span>`).join("");
+  return `<div>
+    <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" style="width:100%;height:230px;">
+      ${grid}${bars}${ref1}${ref2}${xlabels}
+    </svg>
+    <div style="font-size:11.5px;color:var(--muted);margin-top:4px;">${legend}</div>
+  </div>`;
+}
+
+function afterRender(){
+  if(activeTab==="dashboard") drawDashboardCharts();
+  if(activeTab==="bond") drawBondChart();
+}
+
+render();
+</script>
+</body>
+</html>
