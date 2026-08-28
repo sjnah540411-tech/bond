@@ -73,6 +73,15 @@
   .save-status{font-size:10.5px;text-align:center;margin:0 0 6px 0;line-height:1.5;}
   .save-status.dirty{color:#F0B429;font-weight:700;}
   .save-status.clean{color:rgba(255,255,255,0.45);}
+  .sync-status{font-size:10px;text-align:center;margin:0 0 8px 0;line-height:1.5;color:rgba(255,255,255,0.5);}
+  .readonly-badge{
+    background:rgba(240,180,41,0.16);color:#F0B429;border:1px solid rgba(240,180,41,0.35);
+    padding:6px 10px;border-radius:7px;font-size:11px;font-weight:800;text-align:center;margin-bottom:2px;
+  }
+  .readonly-banner{
+    background:#FBF1E5;border:1px solid #F0D9A8;color:#8A5D00;padding:10px 16px;border-radius:8px;
+    font-size:12.5px;font-weight:600;margin-bottom:18px;line-height:1.6;
+  }
   .ghostbtn{
     background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.14);color:rgba(255,255,255,0.85);
     padding:8px 10px;border-radius:7px;font-size:11.5px;cursor:pointer;text-align:center;font-weight:600;
@@ -200,7 +209,7 @@
    DATA MODEL
 ============================================================ */
 const ACCOUNTS = ["CMA","ISA","IRP","IMA"];
-const TYPES = ["국내채권","해외채권","ETF","구조화상품"];
+const TYPES = ["국내채권","해외채권","ETF","구조화상품","예치금"];
 const BOND_TYPES = ["국내채권","해외채권"];
 const TAX_CATS = ["과세","비과세","과세이연"];
 
@@ -259,15 +268,26 @@ function seedHoldings(){
       issueDate:null, maturityDate:null, couponRate:0.03, cycleMonths:0,
       settlementDate:"2026-08-01", firstCouponDate:null, pricePct:1.00, quantity:100000000,
       fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"IMA는 목표수익률 개념(만기/조기상환 조건 별도 확인)" },
+    { id: uid(), account:"CMA", assetType:"예치금", name:"CMA 대기자금(RP형)", rating:"-", currency:"KRW",
+      issueDate:null, maturityDate:null, couponRate:0.0247, cycleMonths:1,
+      settlementDate:"2026-08-08", firstCouponDate:null, pricePct:100, quantity:15000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"개별 상품 매수 후 남은 대기자금(예시) - 실제 잔고로 교체" },
   ];
 }
 
 /* ============================================================
-   PERSISTENCE (localStorage) — works once hosted on a real
-   domain (e.g. GitHub Pages). Falls back gracefully if the
-   browser blocks storage (private mode, sandboxed preview, etc).
+   PERSISTENCE
+   1) localStorage — per-browser/device cache (always used)
+   2) GitHub repo file — optional SHARED data store so anyone
+      opening the same GitHub Pages link (spouse, PB, etc.)
+      sees the latest saved figures, not the seed example data.
+      Read (raw.githubusercontent.com) needs no token for a
+      public repo. Writing (저장) needs a Personal Access Token
+      with Contents read/write on that one repo, entered once
+      per browser via "공유 설정(GitHub)".
 ============================================================ */
 const STORAGE_KEY = "bondPortfolioData_v1";
+const GH_CONFIG_KEY = "bondPortfolioGithubConfig_v1";
 
 function saveToLocalStorage(){
   try{
@@ -289,6 +309,97 @@ function loadFromLocalStorage(){
     return null;
   }
 }
+function getGithubConfig(){
+  try{
+    const raw = localStorage.getItem(GH_CONFIG_KEY);
+    if(!raw) return { owner:"", repo:"", path:"data.json", branch:"main", token:"" };
+    return { owner:"", repo:"", path:"data.json", branch:"main", token:"", ...JSON.parse(raw) };
+  }catch(e){
+    return { owner:"", repo:"", path:"data.json", branch:"main", token:"" };
+  }
+}
+function setGithubConfig(cfg){
+  try{
+    localStorage.setItem(GH_CONFIG_KEY, JSON.stringify(cfg));
+    return true;
+  }catch(e){
+    console.error("설정 저장 실패:", e);
+    return false;
+  }
+}
+function githubReadConfigured(cfg){
+  cfg = cfg || getGithubConfig();
+  return !!(cfg.owner && cfg.repo && cfg.path);
+}
+function githubWriteConfigured(cfg){
+  cfg = cfg || getGithubConfig();
+  return githubReadConfigured(cfg) && !!cfg.token;
+}
+function b64EncodeUtf8(str){
+  return btoa(unescape(encodeURIComponent(str)));
+}
+function b64DecodeUtf8(str){
+  return decodeURIComponent(escape(atob(str)));
+}
+/* 공유 데이터 읽기 — 공개 저장소는 토큰 없이도 raw URL로 읽을 수 있음 */
+async function fetchSharedData(){
+  const cfg = getGithubConfig();
+  if(!githubReadConfigured(cfg)) return null;
+  try{
+    const url = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch||'main'}/${cfg.path}?t=${Date.now()}`;
+    const res = await fetch(url, { cache:"no-store" });
+    if(!res.ok) return null;
+    const data = await res.json();
+    if(!data || !Array.isArray(data.holdings)) return null;
+    return data;
+  }catch(e){
+    console.error("GitHub 공유데이터 불러오기 실패:", e);
+    return null;
+  }
+}
+/* 공유 데이터 쓰기 — GitHub Contents API, 토큰 필요 */
+async function pushSharedData(payload){
+  const cfg = getGithubConfig();
+  if(!githubWriteConfigured(cfg)){
+    return { ok:false, reason:"미설정" };
+  }
+  const apiBase = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}/contents/${cfg.path}`;
+  const headers = {
+    "Authorization": `token ${cfg.token}`,
+    "Accept": "application/vnd.github+json"
+  };
+  try{
+    // 1) 기존 파일의 sha 조회 (없으면 새로 생성)
+    let sha = undefined;
+    const getRes = await fetch(`${apiBase}?ref=${cfg.branch||'main'}`, { headers });
+    if(getRes.ok){
+      const info = await getRes.json();
+      sha = info.sha;
+    } else if(getRes.status !== 404){
+      const errBody = await getRes.text();
+      return { ok:false, reason:`조회 오류(${getRes.status})`, detail: errBody };
+    }
+    // 2) 파일 생성/갱신
+    const content = b64EncodeUtf8(JSON.stringify(payload, null, 2));
+    const putRes = await fetch(apiBase, {
+      method:"PUT",
+      headers: { ...headers, "Content-Type":"application/json" },
+      body: JSON.stringify({
+        message: `포트폴리오 데이터 저장 (${new Date().toISOString()})`,
+        content,
+        sha,
+        branch: cfg.branch || "main"
+      })
+    });
+    if(!putRes.ok){
+      const errBody = await putRes.text();
+      return { ok:false, reason:`저장 오류(${putRes.status})`, detail: errBody };
+    }
+    return { ok:true };
+  }catch(e){
+    return { ok:false, reason:"네트워크 오류", detail: String(e) };
+  }
+}
 function fmtDateTime(iso){
   if(!iso) return "-";
   try{
@@ -303,22 +414,55 @@ function showToast(msg, isError){
   t.style.cssText = `position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
     background:${isError? '#B3213A' : '#0F1B33'};color:#fff;padding:10px 18px;border-radius:8px;
     font-size:13px;font-weight:600;box-shadow:0 8px 24px rgba(0,0,0,0.28);z-index:200;
-    opacity:0;transition:opacity .2s;`;
+    max-width:80vw;text-align:center;opacity:0;transition:opacity .2s;`;
   document.body.appendChild(t);
   if(typeof requestAnimationFrame === "function"){
     requestAnimationFrame(()=>{ t.style.opacity="1"; });
   } else {
     t.style.opacity="1";
   }
-  setTimeout(()=>{ t.style.opacity="0"; setTimeout(()=>t.remove(), 300); }, 2000);
+  setTimeout(()=>{ t.style.opacity="0"; setTimeout(()=>t.remove(), 300); }, 2600);
 }
-function saveData(){
-  const ok = saveToLocalStorage();
-  if(ok){
+function isReadOnlyShared(cfg){
+  cfg = cfg || getGithubConfig();
+  return githubReadConfigured(cfg) && !githubWriteConfigured(cfg);
+}
+async function saveData(){
+  const cfg = getGithubConfig();
+  if(isReadOnlyShared(cfg)){
+    const proceed = confirm(
+      "🔒 읽기 전용 모드입니다.\n\n" +
+      "이 변경사항은 GitHub 공유 데이터에는 반영되지 않습니다. 지금 새로고침하거나 나중에 이 앱을 " +
+      "다시 열면, 저장했던 내용이 사라지고 GitHub에 공유된 원래 데이터로 되돌아갑니다.\n\n" +
+      "그래도 이 기기에만 임시로 저장할까요?"
+    );
+    if(!proceed) return;
+  }
+  const localOk = saveToLocalStorage();
+  if(githubWriteConfigured(cfg)){
+    showToast("저장 중... (GitHub 동기화)");
+    const payload = { holdings, uidCounter, savedAt: new Date().toISOString() };
+    const result = await pushSharedData(payload);
+    if(result.ok){
+      isDirty = false;
+      lastSavedAt = payload.savedAt;
+      lastSyncedAt = payload.savedAt;
+      render();
+      showToast("✓ 저장되었습니다. (이 기기 + GitHub 공유)");
+    } else {
+      // GitHub 동기화는 실패했지만 이 기기에는 저장됨
+      isDirty = false;
+      lastSavedAt = new Date().toISOString();
+      render();
+      showToast(`이 기기에는 저장됐지만 GitHub 동기화 실패: ${result.reason}`, true);
+    }
+  } else if(localOk){
     isDirty = false;
     lastSavedAt = new Date().toISOString();
     render();
-    showToast("✓ 저장되었습니다.");
+    showToast(isReadOnlyShared(cfg)
+      ? "⚠ 이 기기에 임시 저장됨 — 새로고침하면 GitHub 공유 데이터로 되돌아갑니다."
+      : "✓ 저장되었습니다. (이 기기에만 저장 — 공유하려면 '공유 설정'을 사용하세요)");
   } else {
     showToast("저장에 실패했습니다. 'JSON 내보내기'로 백업해 주세요.", true);
   }
@@ -327,22 +471,138 @@ window.addEventListener("beforeunload", function(e){
   if(isDirty){ e.preventDefault(); e.returnValue = ""; }
 });
 
+/* ---------- 공유 설정(GitHub) 모달 ---------- */
+function openGithubSettings(){
+  const cfg = getGithubConfig();
+  document.body.insertAdjacentHTML("beforeend", `
+    <div class="overlay" id="ghModalOverlay">
+      <div class="modal">
+        <h3>공유 설정 (GitHub)</h3>
+        <div class="desc">
+          같은 GitHub 저장소의 파일을 "공유 데이터"로 사용합니다. 이 설정을 해두면, 다른 사람(배우자·PB 등)이
+          같은 GitHub Pages 링크를 열었을 때도 최신 저장 데이터를 자동으로 불러옵니다.<br><br>
+          <b>읽기</b>는 공개(Public) 저장소라면 토큰 없이도 가능합니다.<br>
+          <b>저장(쓰기)</b>은 해당 저장소에 대한 <b>Contents: Read and write</b> 권한의
+          Personal Access Token이 필요합니다. 토큰은 이 브라우저에만 저장되며 공유되지 않습니다.
+        </div>
+        <div class="field-row">
+          <div class="field"><label>GitHub 사용자명/조직명 (owner)</label><input type="text" id="gh_owner" value="${cfg.owner||''}" placeholder="예: sangjin-kim"></div>
+          <div class="field"><label>저장소명 (repo)</label><input type="text" id="gh_repo" value="${cfg.repo||''}" placeholder="예: bond-portfolio"></div>
+        </div>
+        <div class="field-row">
+          <div class="field"><label>데이터 파일 경로</label><input type="text" id="gh_path" value="${cfg.path||'data.json'}" placeholder="data.json"></div>
+          <div class="field"><label>브랜치</label><input type="text" id="gh_branch" value="${cfg.branch||'main'}" placeholder="main"></div>
+        </div>
+        <div class="field">
+          <label>Personal Access Token (저장/쓰기용, 선택 — 읽기 전용이면 비워두세요)</label>
+          <input type="text" id="gh_token" value="${cfg.token||''}" placeholder="ghp_...">
+        </div>
+        <div class="modal-actions" style="justify-content:space-between;">
+          <button class="btn outline" onclick="testGithubConnection()">연결 테스트</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn outline" onclick="closeGithubModal()">취소</button>
+            <button class="btn accent" onclick="saveGithubSettings()">설정 저장</button>
+          </div>
+        </div>
+        <div id="gh_test_result" style="margin-top:10px;font-size:12px;color:var(--muted);"></div>
+      </div>
+    </div>
+  `);
+}
+function closeGithubModal(){
+  const o = document.getElementById("ghModalOverlay");
+  if(o) o.remove();
+}
+function readGithubForm(){
+  return {
+    owner: document.getElementById("gh_owner").value.trim(),
+    repo: document.getElementById("gh_repo").value.trim(),
+    path: document.getElementById("gh_path").value.trim() || "data.json",
+    branch: document.getElementById("gh_branch").value.trim() || "main",
+    token: document.getElementById("gh_token").value.trim()
+  };
+}
+async function testGithubConnection(){
+  const cfg = readGithubForm();
+  const el = document.getElementById("gh_test_result");
+  el.textContent = "확인 중...";
+  if(!githubReadConfigured(cfg)){
+    el.textContent = "owner/repo/path를 입력해 주세요.";
+    return;
+  }
+  const shared = await (async ()=>{
+    try{
+      const url = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch}/${cfg.path}?t=${Date.now()}`;
+      const res = await fetch(url, { cache:"no-store" });
+      if(res.ok){ return { ok:true, exists:true }; }
+      if(res.status===404){ return { ok:true, exists:false }; }
+      return { ok:false, status:res.status };
+    }catch(e){ return { ok:false, error:String(e) }; }
+  })();
+  if(!shared.ok){
+    el.textContent = `읽기 실패 (${shared.status||shared.error}). owner/repo/branch/path 또는 저장소 공개 여부를 확인하세요.`;
+    return;
+  }
+  let msg = shared.exists ? "✓ 읽기 성공 (기존 데이터 파일 확인됨)" : "✓ 저장소는 확인됐지만 아직 데이터 파일이 없습니다 (처음 저장 시 자동 생성됨)";
+  if(cfg.token){
+    const apiBase = `https://api.github.com/repos/${cfg.owner}/${cfg.repo}`;
+    try{
+      const r = await fetch(apiBase, { headers:{ "Authorization":`token ${cfg.token}`, "Accept":"application/vnd.github+json" } });
+      if(r.ok){
+        const info = await r.json();
+        msg += info.permissions && info.permissions.push ? " / ✓ 토큰 쓰기 권한 확인됨" : " / ⚠ 토큰은 유효하나 쓰기 권한이 없을 수 있습니다";
+      } else {
+        msg += ` / ⚠ 토큰 확인 실패(${r.status})`;
+      }
+    }catch(e){ msg += " / ⚠ 토큰 확인 중 오류"; }
+  } else {
+    msg += " / (토큰 없음 — 읽기 전용, 저장은 이 기기에만 됩니다)";
+  }
+  el.textContent = msg;
+}
+function saveGithubSettings(){
+  const cfg = readGithubForm();
+  const ok = setGithubConfig(cfg);
+  closeGithubModal();
+  if(ok){
+    showToast("✓ 공유 설정을 저장했습니다.");
+    render();
+  } else {
+    showToast("공유 설정 저장에 실패했습니다.", true);
+  }
+}
+
 let holdings;
 let isDirty = false;
 let lastSavedAt = null;
-{
-  const saved = loadFromLocalStorage();
-  if(saved && Array.isArray(saved.holdings) && saved.holdings.length){
-    holdings = saved.holdings;
-    const maxId = holdings.reduce((m,h)=>{
-      const n = parseInt(String(h.id||"h0").replace("h",""),10);
-      return isNaN(n)? m : Math.max(m,n);
-    }, 0);
-    uidCounter = (saved.uidCounter && saved.uidCounter > maxId) ? saved.uidCounter : maxId + 1;
-    lastSavedAt = saved.savedAt || null;
+let lastSyncedAt = null;
+let appReady = false;
+
+async function initApp(){
+  // 1) 공유 저장소(GitHub)에 데이터가 있으면 그것을 최우선으로 사용
+  //    (배우자/PB 등 다른 사람이 처음 열어도 최신 저장 수치를 보게 됨)
+  const shared = await fetchSharedData();
+  const local = loadFromLocalStorage();
+
+  if(shared){
+    holdings = shared.holdings;
+    lastSavedAt = shared.savedAt || null;
+    lastSyncedAt = shared.savedAt || null;
+  } else if(local && Array.isArray(local.holdings) && local.holdings.length){
+    holdings = local.holdings;
+    lastSavedAt = local.savedAt || null;
   } else {
     holdings = seedHoldings();
   }
+  const maxId = holdings.reduce((m,h)=>{
+    const n = parseInt(String(h.id||"h0").replace("h",""),10);
+    return isNaN(n)? m : Math.max(m,n);
+  }, 0);
+  const savedCounter = (shared && shared.uidCounter) || (local && local.uidCounter) || 0;
+  uidCounter = savedCounter > maxId ? savedCounter : maxId + 1;
+
+  appReady = true;
+  render();
 }
 let activeTab = "dashboard";
 let selectedBondId = null;
@@ -354,6 +614,7 @@ let monthlyCount = 36;
    HELPERS
 ============================================================ */
 function isBond(h){ return BOND_TYPES.includes(h.assetType); }
+function isCash(h){ return h.assetType === "예치금"; }
 function fmtInt(n){
   if(n===null || n===undefined || isNaN(n)) return "-";
   return Math.round(n).toLocaleString("ko-KR");
@@ -385,6 +646,7 @@ function parseDate(s){ return new Date(s + "T00:00:00"); }
 function toISO(d){ return d.toISOString().slice(0,10); }
 
 function purchaseAmountLocal(h){
+  if(isCash(h)) return h.quantity; // 잔고금액 그 자체 (단가 개념 없음)
   if(isBond(h)) return h.quantity * h.pricePct / 100;
   return h.quantity * h.pricePct;
 }
@@ -479,8 +741,74 @@ function etfSummary(h){
   return { purchaseLocal, purchaseKRW, evalKRW, pnl, ret };
 }
 
+/* ---------- CMA 대기자금(예치금): 일별로 발생하는 이자 ---------- */
+function dailyInterestGross(h){
+  // 잔고 x 연이자율 / 365  (세전, 하루치)
+  return h.quantity * h.couponRate / 365;
+}
+function cashDailyRow(h){
+  const gross = dailyInterestGross(h);
+  const tax = gross * h.taxRate;
+  return { gross, tax, net: gross - tax };
+}
+/* 일자별 누적 순이자 시리즈 (기준일~endDate, 기본값=오늘) — "일자별 발생" 시각화용 */
+function generateCashDailySeries(h, endDate){
+  if(!h.settlementDate) return [];
+  const start = parseDate(h.settlementDate);
+  const end = endDate ? new Date(endDate.getTime()) : new Date();
+  end.setHours(0,0,0,0);
+  if(end < start) return [];
+  const { net: dailyNet } = cashDailyRow(h);
+  const rows = [];
+  let cum = 0;
+  let d = new Date(start.getTime());
+  let guard = 0;
+  while(d.getTime() <= end.getTime() && guard < 5000){
+    guard++;
+    cum += dailyNet;
+    rows.push({ date: toISO(d), value: cum });
+    d = new Date(d.getTime() + 86400000);
+  }
+  return rows;
+}
+/* 특정 달(연,월)에 대한 세전/세후 이자 (그 달 중 잔고가 존재했던 일수만큼만 계산) */
+function cashMonthlyValues(h, months){
+  const net = new Array(months.length).fill(0);
+  const gross = new Array(months.length).fill(0);
+  if(!h.settlementDate) return { net, gross };
+  const start = parseDate(h.settlementDate);
+  const dayRate = h.couponRate / 365;
+  months.forEach((key, i)=>{
+    const [yy, mm] = key.split("-").map(Number);
+    const monthStart = new Date(yy, mm-1, 1);
+    const monthEnd = new Date(yy, mm, 0); // 그 달의 마지막 날
+    if(monthEnd.getTime() < start.getTime()) return;
+    const effStart = monthStart.getTime() < start.getTime() ? start : monthStart;
+    const days = Math.round((monthEnd.getTime() - effStart.getTime())/86400000) + 1;
+    if(days <= 0) return;
+    const g = Math.round(h.quantity * dayRate * days);
+    const t = Math.round(g * h.taxRate);
+    gross[i] = g;
+    net[i] = g - t;
+  });
+  return { net, gross };
+}
+function cashAnnualGrossForYear(h, year){
+  if(!h.settlementDate) return 0;
+  const start = parseDate(h.settlementDate);
+  const yearStart = new Date(year, 0, 1);
+  const yearEnd = new Date(year, 11, 31);
+  if(yearEnd.getTime() < start.getTime()) return 0;
+  const effStart = yearStart.getTime() < start.getTime() ? start : yearStart;
+  const days = Math.round((yearEnd.getTime() - effStart.getTime())/86400000) + 1;
+  if(days <= 0) return 0;
+  return h.quantity * (h.couponRate/365) * days;
+}
+
 function finalPnlKRW(h){
-  if(isBond(h)){
+  if(isCash(h)){
+    return null; // 예치금은 원금손익 개념이 없음(이자소득만 발생) — 별도 카드/탭에서 이자소득으로 표시
+  } else if(isBond(h)){
     const s = bondSummary(h);
     return s ? s.totalPnlKRW : null;
   } else {
@@ -505,6 +833,24 @@ function annualIncomeAnalysis(){
       yearMap[year][h.taxCategory] = (yearMap[year][h.taxCategory]||0) + grossKRW;
     });
   });
+
+  const cashItems = holdings.filter(isCash).filter(h=>h.settlementDate);
+  if(cashItems.length){
+    const existingYears = Object.keys(yearMap).map(Number);
+    const thisYear = new Date().getFullYear();
+    const maxYear = existingYears.length ? Math.max(...existingYears, thisYear+2) : thisYear+4;
+    cashItems.forEach(h=>{
+      const startYear = parseDate(h.settlementDate).getFullYear();
+      for(let y=startYear; y<=maxYear; y++){
+        const gross = cashAnnualGrossForYear(h, y);
+        if(gross<=0) continue;
+        const key = String(y);
+        if(!yearMap[key]) yearMap[key] = {"과세":0, "비과세":0, "과세이연":0};
+        yearMap[key][h.taxCategory] = (yearMap[key][h.taxCategory]||0) + gross;
+      }
+    });
+  }
+
   return Object.keys(yearMap).sort().map(year=>({ year, ...yearMap[year] }));
 }
 
@@ -557,15 +903,21 @@ function buildMonthlyMatrix(startYear, startMonth, monthCount){
     return { holding:h, net, gross, principal };
   });
 
+  const cashItems = holdings.filter(isCash);
+  const perCash = cashItems.map(h=>{
+    const { net, gross } = cashMonthlyValues(h, months);
+    return { holding:h, net, gross, principal:new Array(months.length).fill(0) };
+  });
+
   const totalsByCategory = {"과세":new Array(months.length).fill(0), "비과세":new Array(months.length).fill(0), "과세이연":new Array(months.length).fill(0)};
   const totalNet = new Array(months.length).fill(0);
   const totalPrincipal = new Array(months.length).fill(0);
-  perBond.forEach(pb=>{
+  [...perBond, ...perCash].forEach(pb=>{
     pb.net.forEach((v,i)=>{ totalNet[i]+=v; totalsByCategory[pb.holding.taxCategory][i]+=v; });
     pb.principal.forEach((v,i)=>{ totalPrincipal[i]+=v; });
   });
 
-  return { months, perBond, totalsByCategory, totalNet, totalPrincipal };
+  return { months, perBond, perCash, totalsByCategory, totalNet, totalPrincipal };
 }
 
 /* ============================================================
@@ -590,6 +942,7 @@ function render(){
         ${navBtn("holdings","▥","보유자산목록")}
         ${navBtn("bond","◒","채권현금흐름")}
         ${navBtn("etf","◇","ETF · IMA현황")}
+        ${navBtn("cash","◈","CMA대기자금")}
         ${navBtn("tax","⛁","세금·건보료")}
         ${navBtn("monthly","▦","월별현금흐름")}
         ${navBtn("help","?","사용법")}
@@ -612,10 +965,18 @@ function render(){
       </div>
       <div style="flex:1"></div>
       <div class="sidebar-foot">
-        <button class="savebtn" onclick="saveData()">💾 변경사항 저장</button>
+        ${isReadOnlyShared() ? `<div class="readonly-badge">🔒 읽기 전용 모드</div>` : ""}
+        <button class="savebtn" onclick="saveData()">${isReadOnlyShared() ? "💾 임시 저장 (이 기기만)" : "💾 변경사항 저장"}</button>
         <div class="save-status ${isDirty?'dirty':'clean'}">
           ${isDirty ? "● 저장되지 않은 변경사항이 있습니다" : (lastSavedAt ? "마지막 저장: "+fmtDateTime(lastSavedAt) : "저장된 데이터 없음")}
         </div>
+        <div class="sync-status">
+          ${githubReadConfigured() ?
+            `🔗 공유됨: ${getGithubConfig().owner}/${getGithubConfig().repo}${lastSyncedAt? '<br>동기화: '+fmtDateTime(lastSyncedAt) : '<br>(아직 동기화 전)'}
+             ${isReadOnlyShared() ? '<br><span style="color:#F0B429;">쓰기 토큰 없음 — 저장은 임시(이 기기만)</span>' : ''}`
+            : '🔌 공유 설정 안 됨 (이 기기에만 저장)'}
+        </div>
+        <button class="ghostbtn" onclick="openGithubSettings()">⚙ 공유 설정(GitHub)</button>
         <button class="ghostbtn" onclick="exportData()">⭳ JSON 내보내기</button>
         <button class="ghostbtn" onclick="document.getElementById('importFile').click()">⭱ JSON 가져오기</button>
         <button class="ghostbtn" onclick="resetData()">↺ 예시 데이터로 초기화</button>
@@ -635,13 +996,21 @@ function setTab(key){ activeTab = key; if(key!=="bond") {} render(); }
 
 function renderMain(){
   const main = document.getElementById("main");
-  if(activeTab==="dashboard") main.innerHTML = dashboardHTML();
-  else if(activeTab==="holdings") main.innerHTML = holdingsHTML();
-  else if(activeTab==="bond") main.innerHTML = bondHTML();
-  else if(activeTab==="etf") main.innerHTML = etfHTML();
-  else if(activeTab==="tax") main.innerHTML = taxHTML();
-  else if(activeTab==="monthly") main.innerHTML = monthlyHTML();
-  else if(activeTab==="help") main.innerHTML = helpHTML();
+  let body = "";
+  if(activeTab==="dashboard") body = dashboardHTML();
+  else if(activeTab==="holdings") body = holdingsHTML();
+  else if(activeTab==="bond") body = bondHTML();
+  else if(activeTab==="etf") body = etfHTML();
+  else if(activeTab==="cash") body = cashHTML();
+  else if(activeTab==="tax") body = taxHTML();
+  else if(activeTab==="monthly") body = monthlyHTML();
+  else if(activeTab==="help") body = helpHTML();
+  const banner = isReadOnlyShared()
+    ? `<div class="readonly-banner">🔒 <b>읽기 전용 모드</b> — 이 기기에는 GitHub 저장 권한(토큰)이 없습니다.
+        지금 보고 있는 데이터는 GitHub에 공유된 최신 값이며, 여기서 저장을 눌러도 <b>이 기기에만 임시로 남고
+        GitHub에는 반영되지 않습니다.</b> 새로고침하거나 나중에 다시 열면 공유된 원래 데이터로 되돌아갑니다.</div>`
+    : "";
+  main.innerHTML = banner + body;
   afterRender();
 }
 
@@ -676,7 +1045,10 @@ function dashboardHTML(){
 
   const rows = holdings.map(h=>{
     const pnl = finalPnlKRW(h);
-    const source = isBond(h) ? "채권현금흐름" : "ETF_IMA현황";
+    const source = isBond(h) ? "채권현금흐름" : (isCash(h) ? "CMA대기자금" : "ETF_IMA현황");
+    const pnlDisplay = isCash(h)
+      ? `연이자(세전) ${fmtInt(h.quantity*h.couponRate)}`
+      : (pnl===null ? '평가금액 입력필요' : fmtInt(pnl));
     return `<tr>
       <td class="l"><span class="tag ${h.account}">${h.account}</span></td>
       <td class="l"><span class="tag type">${h.assetType}</span></td>
@@ -684,7 +1056,7 @@ function dashboardHTML(){
       <td class="l"><span class="tag tax-${h.taxCategory}">${h.taxCategory}</span></td>
       <td>${h.currency}</td>
       <td class="num">${fmtInt(purchaseAmountKRW(h))}</td>
-      <td class="num ${pnlClass(pnl)}">${pnl===null?'평가금액 입력필요':fmtInt(pnl)}</td>
+      <td class="num ${pnlClass(pnl)}">${pnlDisplay}</td>
       <td class="l">${source}</td>
     </tr>`;
   }).join("");
@@ -765,9 +1137,9 @@ function holdingsHTML(){
       <td><span class="tag tax-${h.taxCategory}">${h.taxCategory}</span></td>
       <td>${h.currency}</td>
       <td>${fmtDate(h.settlementDate)}</td>
-      <td>${fmtDate(h.maturityDate)}</td>
-      <td class="num">${isBond(h)? fmtPct(h.couponRate,3) : "-"}</td>
-      <td class="num">${fmtNum(h.pricePct,2)}</td>
+      <td>${isCash(h)? "-(만기없음)" : fmtDate(h.maturityDate)}</td>
+      <td class="num">${(isBond(h)||isCash(h))? fmtPct(h.couponRate,3) : "-"}</td>
+      <td class="num">${isCash(h)? "-" : fmtNum(h.pricePct,2)}</td>
       <td class="num">${fmtInt(h.quantity)}</td>
       <td class="num">${fmtInt(purchaseAmountLocal(h))}</td>
       <td class="num">${fmtInt(purchaseAmountKRW(h))}</td>
@@ -782,7 +1154,7 @@ function holdingsHTML(){
       <div><h2>보유자산목록</h2><div class="sub">CMA · ISA · IRP · IMA 전 계좌 통합 자산 마스터</div></div>
       <button class="btn accent" onclick="openAdd()">+ 자산 추가</button>
     </div>
-    <div class="note">채권은 매수단가를 <b>액면 100 기준 가격(%)</b>으로 입력하세요. (예: 국내채권 시장관행 단가 9,207원(액면 10,000당) → 92.07 / 해외채권 Dirty Price 114.95 → 그대로 입력) ETF·IMA는 좌당(또는 1단위) 가격을 입력합니다. '과세구분'은 금융소득(이자소득) 합산 판단에 사용되니 계좌 성격에 맞게 확인하세요.</div>
+    <div class="note">채권은 매수단가를 <b>액면 100 기준 가격(%)</b>으로 입력하세요. (예: 국내채권 시장관행 단가 9,207원(액면 10,000당) → 92.07 / 해외채권 Dirty Price 114.95 → 그대로 입력) ETF·IMA는 좌당(또는 1단위) 가격을 입력합니다. <b>예치금(CMA대기자금)</b>은 잔고금액과 연이자율만 입력하면 되며 만기·단가·환율 개념이 없습니다. '과세구분'은 금융소득(이자소득) 합산 판단에 사용되니 계좌 성격에 맞게 확인하세요.</div>
     <div class="card">
       <div class="scrollx"><table>
         <thead><tr>
@@ -796,20 +1168,21 @@ function holdingsHTML(){
   `;
 }
 
-function holdingForm(h){
+function holdingForm(h, prefill){
   const isNew = !h;
-  const v = h || {
+  const v = h || prefill || {
     account:"CMA", assetType:"국내채권", name:"", rating:"", currency:"KRW",
     issueDate:"", maturityDate:"", couponRate:0, cycleMonths:6, settlementDate:"",
     firstCouponDate:"", pricePct:100, quantity:100000000, fxRate:1, taxRate:0.154,
     currentPrice:"", note:""
   };
   const bond = BOND_TYPES.includes(v.assetType);
+  const cash = v.assetType === "예치금";
   return `
     <div class="overlay" id="modalOverlay">
       <div class="modal">
         <h3>${isNew? "자산 추가" : "자산 편집"}</h3>
-        <div class="desc">계좌·자산유형에 따라 필요한 입력 항목이 달라집니다.</div>
+        <div class="desc">계좌·자산유형에 따라 필요한 입력 항목이 달라집니다. '예치금'은 개별 상품 매수 후 남은 CMA 대기자금(일별 이자 발생)을 관리합니다.</div>
         <div class="field-row">
           <div class="field"><label>계좌구분</label>
             <select id="f_account" onchange="suggestTaxCategory()">${ACCOUNTS.map(a=>`<option value="${a}" ${v.account===a?'selected':''}>${a}</option>`).join("")}</select>
@@ -821,32 +1194,33 @@ function holdingForm(h){
         <div class="field"><label>종목명</label><input type="text" id="f_name" value="${v.name}"></div>
         <div class="field-row">
           <div class="field"><label>신용등급</label><input type="text" id="f_rating" value="${v.rating||''}"></div>
-          <div class="field"><label>통화</label><input type="text" id="f_currency" value="${v.currency}"></div>
+          <div class="field" id="currencyWrap"><label>통화</label><input type="text" id="f_currency" value="${v.currency}"></div>
         </div>
         <div id="bondFieldsA" style="${bond?'':'display:none'}">
           <div class="field-row">
             <div class="field"><label>발행일</label><input type="date" id="f_issueDate" value="${v.issueDate||''}"></div>
             <div class="field"><label>만기일</label><input type="date" id="f_maturityDate" value="${v.maturityDate||''}"></div>
           </div>
-          <div class="field-row">
-            <div class="field"><label>표면이율(%) 예:1.479</label><input type="number" step="0.0001" id="f_couponRate" value="${(v.couponRate*100)||0}"></div>
-            <div class="field"><label>이자지급주기(개월)</label><input type="number" id="f_cycleMonths" value="${v.cycleMonths||6}"></div>
-          </div>
           <div class="field"><label>최초이자지급일</label><input type="date" id="f_firstCouponDate" value="${v.firstCouponDate||''}"></div>
         </div>
+        <div class="field-row" id="rateFieldsA" style="${(bond||cash)?'':'display:none'}">
+          <div class="field"><label id="rateLabel">${bond? "표면이율(%) 예:1.479" : "연이자율(%) 예:2.47"}</label>
+            <input type="number" step="0.0001" id="f_couponRate" value="${(v.couponRate*100)||0}"></div>
+          <div class="field" id="cycleWrap" style="${bond?'':'display:none'}"><label>이자지급주기(개월)</label><input type="number" id="f_cycleMonths" value="${v.cycleMonths||6}"></div>
+        </div>
         <div class="field-row">
-          <div class="field"><label>매수결제일</label><input type="date" id="f_settlementDate" value="${v.settlementDate||''}"></div>
-          <div class="field"><label id="priceLabel">${bond? "매수단가(%, 액면100기준)" : "매수단가(현지통화/좌)"}</label>
+          <div class="field"><label id="settleLabel">${cash? "기준일(적용시작일)" : "매수결제일"}</label><input type="date" id="f_settlementDate" value="${v.settlementDate||''}"></div>
+          <div class="field" id="priceWrap" style="${cash?'display:none':''}"><label id="priceLabel">${bond? "매수단가(%, 액면100기준)" : "매수단가(현지통화/좌)"}</label>
             <input type="number" step="0.01" id="f_pricePct" value="${v.pricePct}"></div>
         </div>
         <div class="field-row">
-          <div class="field"><label id="qtyLabel">${bond? "매수수량(액면금액)" : "매수수량(좌수)"}</label>
+          <div class="field"><label id="qtyLabel">${bond? "매수수량(액면금액)" : (cash? "잔고금액(원)" : "매수수량(좌수)")}</label>
             <input type="number" id="f_quantity" value="${v.quantity}"></div>
-          <div class="field"><label>매수시 환율(KRW/외화1단위, KRW자산=1)</label><input type="number" step="0.01" id="f_fxRate" value="${v.fxRate}"></div>
+          <div class="field" id="fxWrap" style="${cash?'display:none':''}"><label>매수시 환율(KRW/외화1단위, KRW자산=1)</label><input type="number" step="0.01" id="f_fxRate" value="${v.fxRate}"></div>
         </div>
         <div class="field-row">
           <div class="field"><label>세율(%) 예:15.4</label><input type="number" step="0.01" id="f_taxRate" value="${(v.taxRate*100)||0}"></div>
-          <div class="field"><label>현재가/평가단가 (ETF·IMA 평가용, 선택)</label><input type="number" step="0.01" id="f_currentPrice" value="${v.currentPrice===null?'':v.currentPrice}"></div>
+          <div class="field" id="currentPriceWrap" style="${cash?'display:none':''}"><label>현재가/평가단가 (ETF·IMA 평가용, 선택)</label><input type="number" step="0.01" id="f_currentPrice" value="${v.currentPrice===null?'':v.currentPrice}"></div>
         </div>
         <div class="field">
           <label>과세구분 (금융소득 합산 판단용)</label>
@@ -864,9 +1238,18 @@ function holdingForm(h){
 function toggleBondFields(){
   const t = document.getElementById("f_assetType").value;
   const bond = BOND_TYPES.includes(t);
+  const cash = t === "예치금";
   document.getElementById("bondFieldsA").style.display = bond ? "" : "none";
+  document.getElementById("rateFieldsA").style.display = (bond||cash) ? "" : "none";
+  document.getElementById("cycleWrap").style.display = bond ? "" : "none";
+  document.getElementById("rateLabel").textContent = bond? "표면이율(%) 예:1.479" : "연이자율(%) 예:2.47";
+  document.getElementById("settleLabel").textContent = cash? "기준일(적용시작일)" : "매수결제일";
+  document.getElementById("priceWrap").style.display = cash? "none" : "";
+  document.getElementById("fxWrap").style.display = cash? "none" : "";
+  document.getElementById("currentPriceWrap").style.display = cash? "none" : "";
+  document.getElementById("currencyWrap").style.display = cash? "none" : "";
   document.getElementById("priceLabel").textContent = bond? "매수단가(%, 액면100기준)" : "매수단가(현지통화/좌)";
-  document.getElementById("qtyLabel").textContent = bond? "매수수량(액면금액)" : "매수수량(좌수)";
+  document.getElementById("qtyLabel").textContent = bond? "매수수량(액면금액)" : (cash? "잔고금액(원)" : "매수수량(좌수)");
 }
 function suggestTaxCategory(){
   const acct = document.getElementById("f_account").value;
@@ -906,6 +1289,16 @@ function saveHolding(id){
     taxCategory: val("f_taxCategory") || "과세",
     note: val("f_note")
   };
+  if(data.assetType === "예치금"){
+    // 예치금(대기자금)은 단가/환율/만기 개념이 없으므로 고정값으로 정규화
+    data.currency = "KRW";
+    data.pricePct = 100;
+    data.fxRate = 1;
+    data.maturityDate = null;
+    data.firstCouponDate = null;
+    data.issueDate = null;
+    data.currentPrice = null;
+  }
   if(id){
     const idx = holdings.findIndex(x=>x.id===id);
     holdings[idx] = {...holdings[idx], ...data};
@@ -997,7 +1390,7 @@ function drawBondChart(){
    ETF / IMA 현황
 ============================================================ */
 function etfHTML(){
-  const list = holdings.filter(h=>!isBond(h));
+  const list = holdings.filter(h=>!isBond(h) && !isCash(h));
   const rows = list.map(h=>{
     const s = etfSummary(h);
     return `<tr>
@@ -1037,6 +1430,102 @@ function updateCurrentPrice(id, value){
   holdings[idx].currentPrice = value===""? null : parseFloat(value);
   isDirty = true;
   render();
+}
+
+/* ============================================================
+   CMA 대기자금(예치금) — 개별 상품 매수 후 남은 잔고, 일자별 이자
+============================================================ */
+function cashHTML(){
+  const list = holdings.filter(isCash);
+  const today = new Date();
+
+  const totalBalance = list.reduce((s,h)=>s+h.quantity,0);
+  const totalAnnualGross = list.reduce((s,h)=>s+h.quantity*h.couponRate,0);
+  const totalAnnualTax = list.reduce((s,h)=>s+h.quantity*h.couponRate*h.taxRate,0);
+  const totalAnnualNet = totalAnnualGross - totalAnnualTax;
+  const totalDailyGross = list.reduce((s,h)=>s+dailyInterestGross(h),0);
+
+  const rows = list.map(h=>{
+    const d = cashDailyRow(h);
+    const monthKey = ymKey(today.getFullYear(), today.getMonth()+1);
+    const { net: monthNetArr, gross: monthGrossArr } = cashMonthlyValues(h, [monthKey]);
+    return `<tr>
+      <td class="l"><span class="tag ${h.account}">${h.account}</span></td>
+      <td class="l">${h.name}<div class="badge-example">${h.note||""}</div></td>
+      <td class="l"><span class="tag tax-${h.taxCategory}">${h.taxCategory}</span></td>
+      <td class="num">${fmtInt(h.quantity)}</td>
+      <td class="num">${fmtPct(h.couponRate,2)}</td>
+      <td class="num">${fmtPct(h.taxRate,1)}</td>
+      <td>${fmtDate(h.settlementDate)}</td>
+      <td class="num">${fmtInt(d.gross)}</td>
+      <td class="num">${fmtInt(d.net)}</td>
+      <td class="num">${fmtInt(monthGrossArr[0])}</td>
+      <td class="num">${fmtInt(monthNetArr[0])}</td>
+      <td>
+        <button class="icon-btn" title="편집" onclick="openEdit('${h.id}')">✎</button>
+        <button class="icon-btn" title="삭제" onclick="deleteHolding('${h.id}')">✕</button>
+      </td>
+    </tr>`;
+  }).join("");
+
+  // 일자별 누적 순이자 시리즈 (전체 예치금 합산, 기준일~오늘)
+  const mergedDaily = {};
+  list.forEach(h=>{
+    if(!h.settlementDate) return;
+    const start = parseDate(h.settlementDate);
+    const dailyNet = cashDailyRow(h).net;
+    let d = new Date(start.getTime());
+    let guard = 0;
+    while(d.getTime() <= today.getTime() && guard < 5000){
+      guard++;
+      const key = toISO(d);
+      mergedDaily[key] = (mergedDaily[key]||0) + dailyNet;
+      d = new Date(d.getTime()+86400000);
+    }
+  });
+  const sortedDates = Object.keys(mergedDaily).sort();
+  let running = 0;
+  const combinedSeries = sortedDates.map(k=>{ running += mergedDaily[k]; return {label:k, value:running}; });
+
+  return `
+    <div class="topbar">
+      <div><h2>CMA대기자금</h2><div class="sub">개별 상품(채권·ETF) 매수 후 남은 대기자금 잔고와 일자별로 발생하는 이자소득(과세) 현황</div></div>
+      <button class="btn accent" onclick="openAddCash()">+ 대기자금 추가</button>
+    </div>
+    <div class="note">
+      CMA 대기자금(RP형/발행어음형 등)은 만기가 없는 수시입출금성 예치금으로, <b>잔고 × 연이자율 ÷ 365</b>로 매일 이자가 발생한다고 가정합니다.
+      실제로는 매일 잔고가 바뀔 수 있으나, 이 화면은 입력해 둔 현재 잔고가 계속 유지된다고 가정한 단순 추정치입니다.
+    </div>
+    <div class="kpi-row">
+      <div class="kpi"><div class="lbl">대기자금 총 잔고(KRW)</div><div class="val num">${fmtInt(totalBalance)}</div><div class="sub">${list.length}건</div></div>
+      <div class="kpi"><div class="lbl">오늘 하루 이자(세전)</div><div class="val num">${fmtInt(totalDailyGross)}</div><div class="sub">잔고 × 연이자율 ÷ 365</div></div>
+      <div class="kpi"><div class="lbl">연환산 예상 이자소득(세전)</div><div class="val num">${fmtInt(totalAnnualGross)}</div><div class="sub">세후 ${fmtInt(totalAnnualNet)}</div></div>
+      <div class="kpi"><div class="lbl">연환산 세금(예상)</div><div class="val num pill-loss">${fmtInt(totalAnnualTax)}</div><div class="sub">과세 적용시 기준</div></div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <h3>일자별 누적 이자발생 추이(세후) <span class="muted">기준일 ~ 오늘, 잔고 유지 가정</span></h3>
+      <div class="chart-wrap">${combinedSeries.length? lineChartSVG(combinedSeries,{color:"#3667C7"}) : '<div class="empty">기준일이 입력된 대기자금이 없습니다.</div>'}</div>
+    </div>
+    <div class="card">
+      <h3>대기자금 상세 <span class="muted">${list.length}건</span></h3>
+      <div class="scrollx"><table>
+        <thead><tr>
+          <th class="l">계좌</th><th class="l">종목명</th><th class="l">과세구분</th><th>잔고(KRW)</th>
+          <th>연이자율</th><th>세율</th><th class="l">기준일</th><th>일이자(세전)</th><th>일이자(세후)</th>
+          <th>이번달 예상(세전)</th><th>이번달 예상(세후)</th><th>관리</th>
+        </tr></thead>
+        <tbody>${rows || `<tr><td colspan="12" class="empty">등록된 대기자금이 없습니다. '대기자금 추가'로 시작하세요.</td></tr>`}</tbody>
+      </table></div>
+    </div>
+  `;
+}
+function openAddCash(){
+  document.body.insertAdjacentHTML("beforeend", holdingForm(null, {
+    account:"CMA", assetType:"예치금", name:"CMA 대기자금", rating:"-", currency:"KRW",
+    issueDate:null, maturityDate:null, couponRate:0.0247, cycleMonths:1,
+    settlementDate: toISO(new Date()), firstCouponDate:null, pricePct:100, quantity:0,
+    fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:""
+  }));
 }
 
 /* ============================================================
@@ -1114,9 +1603,9 @@ function taxHTML(){
    월별현금흐름 (이자를 이자발생월 다음 달부터 안분)
 ============================================================ */
 function earliestSettlementYM(){
-  const bonds = holdings.filter(isBond).filter(h=>h.settlementDate);
-  if(bonds.length===0){ const t=new Date(); return {y:t.getFullYear(), m:t.getMonth()+1}; }
-  const dates = bonds.map(h=>new Date(h.settlementDate+"T00:00:00"));
+  const items = holdings.filter(h=>isBond(h)||isCash(h)).filter(h=>h.settlementDate);
+  if(items.length===0){ const t=new Date(); return {y:t.getFullYear(), m:t.getMonth()+1}; }
+  const dates = items.map(h=>new Date(h.settlementDate+"T00:00:00"));
   const min = new Date(Math.min(...dates));
   return {y:min.getFullYear(), m:min.getMonth()+1};
 }
@@ -1136,8 +1625,20 @@ function monthlyHTML(){
         <span class="tag ${pb.holding.account}">${pb.holding.account}</span>
         <span class="tag tax-${pb.holding.taxCategory}">${pb.holding.taxCategory}</span><br>
         <span style="font-weight:700;">${pb.holding.name}</span>
+        <div class="badge-example">채권이자(다음달부터 안분)</div>
       </td>
       ${pb.net.map(v=>`<td class="num">${v===0?'-':fmtInt(v)}</td>`).join("")}
+    </tr>`).join("");
+
+  const cashRows = matrix.perCash.map(pc=>`
+    <tr>
+      <td class="l sticky">
+        <span class="tag ${pc.holding.account}">${pc.holding.account}</span>
+        <span class="tag tax-${pc.holding.taxCategory}">${pc.holding.taxCategory}</span><br>
+        <span style="font-weight:700;">${pc.holding.name}</span>
+        <div class="badge-example">예치금이자(해당월 실일수 계산, 안분 없음)</div>
+      </td>
+      ${pc.net.map(v=>`<td class="num">${v===0?'-':fmtInt(v)}</td>`).join("")}
     </tr>`).join("");
 
   const principalRow = `<tr class="subtotal">
@@ -1156,10 +1657,11 @@ function monthlyHTML(){
 
   return `
     <div class="topbar">
-      <div><h2>월별현금흐름</h2><div class="sub">이자는 이자발생(확정)월 다음 달부터 이자지급주기 개월 수만큼 균등 안분하여 표시 (세후, KRW 환산)</div></div>
+      <div><h2>월별현금흐름</h2><div class="sub">채권이자는 이자발생월 다음 달부터 안분, CMA 대기자금(예치금) 이자는 일자별 실제 발생분을 월 합산 (세후, KRW 환산)</div></div>
     </div>
     <div class="note">
-      예) 6개월마다 이자가 지급되는 채권이 2026-09에 이자가 확정되면, 실제 현금흐름 체감을 위해 그 금액을 2026-10부터 2027-03까지 6개월간 균등하게 나누어 표시합니다.
+      <b>채권</b>: 6개월마다 이자가 지급되는 채권이 2026-09에 이자가 확정되면, 실제 현금흐름 체감을 위해 그 금액을 2026-10부터 2027-03까지 6개월간 균등하게 나누어 표시합니다.<br>
+      <b>CMA 대기자금(예치금)</b>: 잔고 × 연이자율 ÷ 365로 매일 이자가 발생한다고 보고, 안분 없이 그 달에 실제로 발생한 일수만큼만 그 달에 바로 표시합니다.<br>
       원금상환은 안분하지 않고 실제 상환월에 전액 표시합니다.
     </div>
     <div class="controls-row">
@@ -1173,7 +1675,7 @@ function monthlyHTML(){
       </div>
     </div>
     <div class="card">
-      <h3>채권별 월별 세후 이자현금흐름 <span class="muted">${matrix.months[0]} ~ ${matrix.months[matrix.months.length-1]}</span></h3>
+      <h3>채권 · 대기자금 월별 세후 현금흐름 <span class="muted">${matrix.months[0]} ~ ${matrix.months[matrix.months.length-1]}</span></h3>
       <div class="scrollx"><table class="month-table">
         <thead><tr>
           <th class="l sticky">종목명</th>
@@ -1181,6 +1683,7 @@ function monthlyHTML(){
         </tr></thead>
         <tbody>
           ${bondRows || `<tr><td class="l sticky">등록된 채권 없음</td></tr>`}
+          ${cashRows}
           ${totalRow}
           ${catRows}
           ${principalRow}
@@ -1200,8 +1703,9 @@ function helpHTML(){
         <li><b>보유자산목록</b> — CMA · ISA · IRP · IMA 전 계좌 자산을 등록/편집/삭제하고 과세구분을 지정하는 마스터 목록</li>
         <li><b>채권현금흐름</b> — 국내채권 · 해외채권 공통 양식. 채권을 선택하면 매수~만기 현금흐름과 누적손익이 자동 계산됩니다</li>
         <li><b>ETF · IMA현황</b> — 채권이 아닌 자산은 현재가를 직접 입력해 평가손익을 확인합니다</li>
-        <li><b>세금 · 건보료</b> — 연도별 과세/비과세/과세이연 이자소득을 집계하여 건강보험료(1,000만원)·금융소득종합과세(2,000만원) 기준과 비교합니다</li>
-        <li><b>월별현금흐름</b> — 채권 이자를 이자발생월 다음 달부터 균등 안분한 실제 월별 현금흐름표</li>
+        <li><b>CMA대기자금</b> — 개별 상품(채권·ETF) 매수 후 남은 CMA 잔고와, 그 잔고에서 매일 발생하는 이자소득(과세)을 확인합니다</li>
+        <li><b>세금 · 건보료</b> — 연도별 과세/비과세/과세이연 이자소득(채권+대기자금 합산)을 집계하여 건강보험료(1,000만원)·금융소득종합과세(2,000만원) 기준과 비교합니다</li>
+        <li><b>월별현금흐름</b> — 채권 이자를 이자발생월 다음 달부터 균등 안분하고, CMA대기자금 이자는 해당월 실일수 기준으로 반영한 실제 월별 현금흐름표</li>
       </ul>
       <h4>입력 규칙</h4>
       <ul>
@@ -1230,15 +1734,33 @@ function helpHTML(){
       </ul>
       <h4>데이터 저장</h4>
       <ul>
-        <li>자산을 추가·편집·삭제하거나 ETF/IMA 현재가를 바꾸면 화면에는 바로 반영되지만, <b>브라우저에 실제로 저장되는 것은 아닙니다.</b>
-          왼쪽 사이드바의 <b>💾 변경사항 저장</b> 버튼을 눌러야 이 브라우저(이 기기)에 보존됩니다.</li>
+        <li>자산을 추가·편집·삭제하거나 ETF/IMA 현재가를 바꾸면 화면에는 바로 반영되지만, <b>실제로 저장되는 것은 아닙니다.</b>
+          왼쪽 사이드바의 <b>💾 변경사항 저장</b> 버튼을 눌러야 보존됩니다.</li>
         <li>저장하지 않은 변경사항이 있으면 저장 버튼 아래에 <b>"● 저장되지 않은 변경사항이 있습니다"</b>라고 표시되며,
           이 상태로 탭을 닫으려 하면 브라우저가 한 번 더 확인을 물어봅니다.</li>
-        <li>저장된 데이터는 이 브라우저의 로컬 저장소(localStorage)에 남아, 같은 브라우저로 다시 접속하면 자동으로 불러와집니다.
-          단, 브라우저 데이터를 지우거나 다른 브라우저·기기·시크릿 모드로 열면 저장된 내용을 볼 수 없습니다.</li>
-        <li>기기를 바꾸거나 백업이 필요할 때는 <b>JSON 내보내기</b>로 파일을 저장해 두고, 다른 곳에서 <b>JSON 가져오기</b>로 불러오세요
-          (가져오기를 하면 자동으로 저장까지 됩니다).</li>
-        <li>'예시 데이터로 초기화'를 누르면 최초 예시 11건으로 되돌아가고 그 상태가 바로 저장됩니다.</li>
+        <li>저장은 기본적으로 이 브라우저의 로컬 저장소(localStorage)에 남습니다. 브라우저 데이터를 지우거나
+          다른 브라우저·기기·시크릿 모드로 열면 이 저장 내용은 보이지 않습니다.</li>
+        <li>기기를 바꾸거나 백업이 필요할 때는 <b>JSON 내보내기</b>로 파일을 저장해 두고, 다른 곳에서 <b>JSON 가져오기</b>로 불러오세요.</li>
+        <li>'예시 데이터로 초기화'를 누르면 최초 예시 12건(CMA대기자금 포함)으로 되돌아가고 그 상태가 바로 저장됩니다.</li>
+      </ul>
+      <h4>배우자·PB 등과 공유하기 (GitHub 공유 설정)</h4>
+      <p>로컬 저장소는 기기별로 따로 저장되기 때문에, 다른 사람이 같은 GitHub Pages 링크를 처음 열면 저장된 실제 수치가 아니라
+        예시 데이터가 보입니다. 이를 해결하려면 사이드바의 <b>⚙ 공유 설정(GitHub)</b>에서 이 앱을 올려둔 GitHub 저장소 정보를
+        연결하세요.</p>
+      <ul>
+        <li><b>Owner / Repo / 파일경로 / 브랜치</b>를 입력하면, 앱이 시작될 때마다 그 저장소의 데이터 파일을 먼저 불러와
+          "지금 저장되어 있는 실제 수치"부터 시작합니다. 저장소가 공개(Public)라면 이 읽기 과정에는 별도 로그인이 필요 없습니다.</li>
+        <li><b>저장(쓰기)</b>까지 하려면 해당 저장소에 대한 <b>Contents: Read and write</b> 권한의 GitHub
+          Personal Access Token을 함께 입력하세요. 토큰은 그 브라우저에만 저장되고 다른 사람과 공유되지 않습니다.</li>
+        <li>보통 <b>본인(관리자) 기기에만 토큰을 등록</b>해 저장을 담당하고, 배우자·PB는 owner/repo/경로만 입력해 두면
+          토큰 없이도 최신 데이터를 읽기 전용으로 볼 수 있습니다. (같이 편집하게 하려면 그 사람의 브라우저에도 본인 소유의
+          토큰을 발급해 넣어주면 됩니다.)</li>
+        <li>토큰이 없는 기기는 화면 상단과 사이드바에 <b>"🔒 읽기 전용 모드"</b>가 표시됩니다. 이 상태에서 저장을 눌러도
+          경고창이 한 번 뜨고, 확인을 누르면 <b>이 기기에만 임시로</b> 저장됩니다 — GitHub에는 반영되지 않으며,
+          앱을 새로고침하거나 나중에 다시 열면 그 임시 저장 내용은 사라지고 GitHub의 공유 데이터로 되돌아갑니다.</li>
+        <li>💾 저장을 누르면 (쓰기 토큰이 있는 경우) 이 기기의 로컬 저장소와 함께 GitHub 저장소의 데이터 파일도 함께 갱신됩니다.
+          사이드바 하단에 연결 상태와 마지막 동기화 시각이 표시됩니다.</li>
+        <li>GitHub의 raw 파일은 짧게(수 분) 캐시될 수 있어, 저장 직후 다른 사람 화면에 반영되기까지 약간의 지연이 있을 수 있습니다.</li>
       </ul>
       <h4>예시 데이터 안내</h4>
       <p>한전채(한국전력공사채권1022) · KT채(KT193-3) · 브라질국채(USD, Brazil 8 1/4 01/20/34)는 실제 매매계산서 수치를 예시로 넣었습니다.
@@ -1259,11 +1781,11 @@ function exportData(){
   a.click();
   URL.revokeObjectURL(url);
 }
-function importData(evt){
+async function importData(evt){
   const file = evt.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = function(e){
+  reader.onload = async function(e){
     try{
       const data = JSON.parse(e.target.result);
       if(!Array.isArray(data)) throw new Error("형식 오류");
@@ -1271,11 +1793,9 @@ function importData(evt){
       uidCounter = 1;
       holdings.forEach(h=>{ if(!h.id) h.id = uid(); });
       selectedBondId = null;
-      saveToLocalStorage();
-      isDirty = false;
-      lastSavedAt = new Date().toISOString();
+      isDirty = true; // saveData()가 로컬+깃허브 동기화와 상태 갱신을 함께 처리
       render();
-      showToast("✓ 데이터를 불러와 저장했습니다.");
+      await saveData();
     }catch(err){
       showToast("파일을 읽는 중 오류가 발생했습니다. 올바른 JSON 파일인지 확인하세요.", true);
     }
@@ -1283,16 +1803,14 @@ function importData(evt){
   reader.readAsText(file);
   evt.target.value = "";
 }
-function resetData(){
+async function resetData(){
   if(!confirm("현재 입력한 데이터가 모두 사라지고 예시 데이터로 초기화됩니다. 계속할까요?")) return;
   uidCounter = 1;
   holdings = seedHoldings();
   selectedBondId = null;
-  saveToLocalStorage();
-  isDirty = false;
-  lastSavedAt = new Date().toISOString();
+  isDirty = true;
   render();
-  showToast("✓ 예시 데이터로 초기화하고 저장했습니다.");
+  await saveData();
 }
 
 /* ============================================================
@@ -1459,7 +1977,11 @@ function afterRender(){
   if(activeTab==="bond") drawBondChart();
 }
 
-render();
+document.getElementById("app").innerHTML = `
+  <div style="width:100%;min-height:100vh;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);color:var(--muted);font-size:13px;">불러오는 중...</div>
+`;
+initApp();
 </script>
 </body>
 </html>
