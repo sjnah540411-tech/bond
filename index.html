@@ -224,50 +224,71 @@ function uid(){ return "h" + (uidCounter++); }
 
 function seedHoldings(){
   return [
-    { id: uid(), account:"CMA", assetType:"국내채권", name:"국고채21-8", rating:"국채", currency:"KRW",
-      issueDate:"2021-12-10", maturityDate:"2029-12-10", couponRate:0.01375, cycleMonths:6,
-      settlementDate:"2026-08-07", firstCouponDate:"2026-12-10", pricePct:92.88, quantity:100000000,
-      fxRate:1, taxRate:0.140, currentPrice:null, taxCategory:"과세", note:"예시(가상) - 실제 조건으로 교체" },
+    { id: uid(), account:"CMA", assetType:"국내채권", name:"국고채권 01375-2912(19-8)", rating:"국채", currency:"KRW",
+      issueDate:"2019-12-10", maturityDate:"2029-12-10", couponRate:0.01375, cycleMonths:6,
+      settlementDate:"2026-08-25", firstCouponDate:"2026-12-10", pricePct:92.82, quantity:100000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"첨부 채권모의투자계산서 실제 수치 (종목코드 KR103502G9C8)" },
     { id: uid(), account:"CMA", assetType:"국내채권", name:"한국전력공사채권1022", rating:"AAA", currency:"KRW",
       issueDate:"2020-03-04", maturityDate:"2030-03-04", couponRate:0.01479, cycleMonths:6,
-      settlementDate:"2026-08-08", firstCouponDate:"2026-09-04", pricePct:92.07, quantity:100000000,
-      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"첨부 매매계산서 실제 수치" },
-    { id: uid(), account:"CMA", assetType:"국내채권", name:"대한항공채", rating:"A-", currency:"KRW",
-      issueDate:"2024-06-15", maturityDate:"2029-06-15", couponRate:0.0450, cycleMonths:3,
-      settlementDate:"2026-08-08", firstCouponDate:"2026-09-15", pricePct:100.00, quantity:100000000,
-      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"예시(가상) - 실제 조건으로 교체" },
+      settlementDate:"2026-08-20", firstCouponDate:"2026-09-04", pricePct:92.18, quantity:50000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", returnToCashId:"h15",
+      note:"첨부 채권모의투자계산서 실제 수치 (종목코드 KR350101GA36) · 만기 시 CMA대기자금으로 자동 편입" },
+    { id: uid(), account:"CMA", assetType:"국내채권", name:"대한항공118-2", rating:"A0", currency:"KRW",
+      issueDate:"2026-06-11", maturityDate:"2029-06-11", couponRate:0.0471, cycleMonths:3,
+      settlementDate:"2026-08-20", firstCouponDate:"2026-09-11", pricePct:101.36, quantity:50000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"첨부 채권모의투자계산서 실제 수치 (종목코드 KR6003492G63)" },
     { id: uid(), account:"CMA", assetType:"국내채권", name:"KT193-3", rating:"AAA", currency:"KRW",
       issueDate:"2020-06-17", maturityDate:"2030-06-17", couponRate:0.01608, cycleMonths:3,
-      settlementDate:"2026-08-08", firstCouponDate:"2026-09-17", pricePct:91.45, quantity:100000000,
-      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"첨부 매매계산서 실제 수치" },
-    { id: uid(), account:"CMA", assetType:"해외채권", name:"브라질국채(BRL)", rating:"BB", currency:"BRL",
-      issueDate:"2024-01-05", maturityDate:"2035-01-01", couponRate:0.10000, cycleMonths:6,
-      settlementDate:"2026-08-07", firstCouponDate:"2027-01-01", pricePct:80.50, quantity:100000,
-      fxRate:278.67, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"예시(가상) - 실제 조건으로 교체" },
-    { id: uid(), account:"CMA", assetType:"해외채권", name:"브라질국채(USD, Brazil 8 1/4 01/20/34)", rating:"BB", currency:"USD",
-      issueDate:"2004-01-20", maturityDate:"2034-01-20", couponRate:0.08250, cycleMonths:6,
-      settlementDate:"2026-08-11", firstCouponDate:"2027-01-20", pricePct:114.95, quantity:62000,
-      fxRate:1423.5, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"첨부 매매계산서 실제 수치(세율은 가정치)" },
-    { id: uid(), account:"CMA", assetType:"ETF", name:"TIGER S&P500", rating:"-", currency:"KRW",
+      settlementDate:"2026-08-20", firstCouponDate:"2026-09-17", pricePct:91.49, quantity:50000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", returnToCashId:"h15",
+      note:"첨부 채권모의투자계산서 실제 수치 (종목코드 KR6030203A62) · 만기 시 CMA대기자금으로 자동 편입" },
+    { id: uid(), account:"CMA", assetType:"해외채권", name:"BNTNF 10 01/01/35 (브라질국채, BRL)", rating:"BB", currency:"BRL",
+      issueDate:"2024-01-01", maturityDate:"2035-01-01", couponRate:0.097619, cycleMonths:6,
+      settlementDate:"2026-08-31", firstCouponDate:"2027-01-01", pricePct:81.5912, quantity:338000,
+      fxRate:268.51, taxRate:0, currentPrice:null, taxCategory:"과세",
+      note:"첨부 외화채권 모의투자계산서 실제 수치 (종목코드 BRSTNCNTF238) · 세금 미징수(자진신고 대상, taxRate=0으로 반영) · 표면금리 10%는 반기복리(연 1회 재투자 가정) 방식으로 실지급 환산 시 연 9.7619%" },
+    { id: uid(), account:"CMA", assetType:"해외채권", name:"BRAZIL 8 1/4 01/20/35 (브라질국채, USD, 가정)", rating:"BB", currency:"USD",
+      issueDate:"2005-01-20", maturityDate:"2035-01-20", couponRate:0.0825, cycleMonths:6,
+      settlementDate:"2026-09-01", firstCouponDate:"2027-01-20", pricePct:114.95, quantity:47483,
+      fxRate:1420, taxRate:0.154, currentPrice:null, taxCategory:"과세",
+      note:"가상 매수 예시 - 기환전한 USD 54,581 매수 가정, 기존 Brazil 8 1/4 01/20/34 조건을 2035년 만기로 준용(단가·표면금리 동일 가정)" },
+    { id: uid(), account:"CMA", assetType:"국내채권", name:"국고채(1.3%,6개월물) - CMA대기자금 세금최소화 전환", rating:"국채", currency:"KRW",
+      issueDate:"2026-09-01", maturityDate:"2034-03-01", couponRate:0.013, cycleMonths:6,
+      settlementDate:"2026-09-01", firstCouponDate:"2027-03-01", pricePct:99.25, quantity:200000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", returnToCashId:"h15",
+      note:"CMA대기자금 2억원을 과세이자 부담 최소화 목적으로 2026년 9월초 저쿠폰(1.3%) 국채로 전환·유지(가정). 표면금리가 낮은 채권을 할인가에 매수하면 상환차익(비과세) 비중이 커져 이자소득세 부담이 줄어드는 구조를 반영. 6개월물 성격으로 2034년까지 동일조건 유지 가정 → 만기 시 CMA대기자금으로 편입" },
+    { id: uid(), account:"CMA", assetType:"국내채권", name:"국고채(1.3%,6개월물) - 국고채권 만기후 재투자", rating:"국채", currency:"KRW",
+      issueDate:"2029-12-10", maturityDate:"2034-06-10", couponRate:0.013, cycleMonths:6,
+      settlementDate:"2029-12-10", firstCouponDate:"2030-06-10", pricePct:99.25, quantity:100000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", returnToCashId:"h15",
+      note:"국고채권 01375-2912(19-8) 만기(2029-12-10) 후 저쿠폰(1.3%) 국채로 지속 재투자(가정) - 2030년 이전 만기 채권을 같은 조건(6개월물, 1.3%)으로 2034년까지 갈아타는 전략 → 만기 시 CMA대기자금으로 편입" },
+    { id: uid(), account:"CMA", assetType:"국내채권", name:"국고채(1.3%,6개월물) - 대한항공118-2 만기후 재투자", rating:"국채", currency:"KRW",
+      issueDate:"2029-06-11", maturityDate:"2034-06-11", couponRate:0.013, cycleMonths:6,
+      settlementDate:"2029-06-11", firstCouponDate:"2029-12-11", pricePct:99.25, quantity:50000000,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", returnToCashId:"h15",
+      note:"대한항공118-2 만기(2029-06-11) 후 저쿠폰(1.3%) 국채로 지속 재투자(가정) - 2030년 이전 만기 채권을 같은 조건(6개월물, 1.3%)으로 2034년까지 갈아타는 전략 → 만기 시 CMA대기자금으로 편입" },
+    { id: uid(), account:"CMA", assetType:"ETF", name:"VOO (Vanguard S&P500 ETF, USD)", rating:"-", currency:"USD",
       issueDate:null, maturityDate:null, couponRate:0, cycleMonths:0,
-      settlementDate:"2026-09-01", firstCouponDate:null, pricePct:22000, quantity:100,
-      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"매수 예정(플레이스홀더)" },
-    { id: uid(), account:"CMA", assetType:"ETF", name:"TIGER 미국나스닥100", rating:"-", currency:"KRW",
+      settlementDate:"2026-09-01", firstCouponDate:null, pricePct:580, quantity:30,
+      fxRate:1420, taxRate:0.154, currentPrice:null, taxCategory:"과세",
+      note:"USD 환전 후 미국 상장 ETF 매수 예정(가정, 약 2,500만원 규모) · 매매차익은 양도소득세(22%, 별도 신고) 대상, taxRate는 분배금(배당) 원천징수 기준 · 실제 매수 시 단가/수량/환율로 교체" },
+    { id: uid(), account:"CMA", assetType:"ETF", name:"QQQ (Invesco Nasdaq100 ETF, USD)", rating:"-", currency:"USD",
       issueDate:null, maturityDate:null, couponRate:0, cycleMonths:0,
-      settlementDate:"2026-09-01", firstCouponDate:null, pricePct:15000, quantity:100,
-      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"매수 예정(플레이스홀더)" },
+      settlementDate:"2026-09-01", firstCouponDate:null, pricePct:550, quantity:32,
+      fxRate:1420, taxRate:0.154, currentPrice:null, taxCategory:"과세",
+      note:"USD 환전 후 미국 상장 ETF 매수 예정(가정, 약 2,500만원 규모) · 매매차익은 양도소득세(22%, 별도 신고) 대상, taxRate는 분배금(배당) 원천징수 기준 · 실제 매수 시 단가/수량/환율로 교체" },
     { id: uid(), account:"ISA", assetType:"국내채권", name:"대한항공채", rating:"A-", currency:"KRW",
       issueDate:"2024-06-15", maturityDate:"2029-06-15", couponRate:0.0450, cycleMonths:3,
       settlementDate:"2026-08-08", firstCouponDate:"2026-09-15", pricePct:100.00, quantity:50000000,
-      fxRate:1, taxRate:0.000, currentPrice:null, taxCategory:"비과세", note:"ISA계좌(비과세 한도 초과분은 9.9% 분리과세, 종합과세 제외)" },
+      fxRate:1, taxRate:0.000, currentPrice:null, taxCategory:"비과세", note:"ISA계좌(비과세 한도 초과분은 9.9% 분리과세, 종합과세 제외) - 예시(가상), 실제 조건으로 교체" },
     { id: uid(), account:"IRP", assetType:"국내채권", name:"국고채21-8", rating:"국채", currency:"KRW",
       issueDate:"2021-12-10", maturityDate:"2029-12-10", couponRate:0.01375, cycleMonths:6,
       settlementDate:"2026-08-07", firstCouponDate:"2026-12-10", pricePct:92.88, quantity:50000000,
-      fxRate:1, taxRate:0.000, currentPrice:null, taxCategory:"과세이연", note:"IRP계좌(인출 시까지 과세이연, 인출 시 연금소득세 등 저율과세)" },
+      fxRate:1, taxRate:0.000, currentPrice:null, taxCategory:"과세이연", note:"IRP계좌(인출 시까지 과세이연, 인출 시 연금소득세 등 저율과세) - 예시(가상), 실제 조건으로 교체" },
     { id: uid(), account:"IMA", assetType:"구조화상품", name:"미래에셋4호", rating:"-", currency:"KRW",
       issueDate:null, maturityDate:null, couponRate:0.03, cycleMonths:0,
       settlementDate:"2026-08-01", firstCouponDate:null, pricePct:1.00, quantity:100000000,
-      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"IMA는 목표수익률 개념(만기/조기상환 조건 별도 확인)" },
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"IMA는 목표수익률 개념(만기/조기상환 조건 별도 확인) - 예시(가상)" },
     { id: uid(), account:"CMA", assetType:"예치금", name:"CMA 대기자금(RP형)", rating:"-", currency:"KRW",
       issueDate:null, maturityDate:null, couponRate:0.0247, cycleMonths:1,
       settlementDate:"2026-08-08", firstCouponDate:null, pricePct:100, quantity:15000000,
@@ -646,12 +667,18 @@ function parseDate(s){ return new Date(s + "T00:00:00"); }
 function toISO(d){ return d.toISOString().slice(0,10); }
 
 function purchaseAmountLocal(h){
-  if(isCash(h)) return h.quantity; // 잔고금액 그 자체 (단가 개념 없음)
+  if(isCash(h)) return cashBalanceAt(h, new Date()); // 기초잔고 + 이미 편입된 만기상환금
   if(isBond(h)) return h.quantity * h.pricePct / 100;
   return h.quantity * h.pricePct;
 }
 function purchaseAmountKRW(h){
   return purchaseAmountLocal(h) * h.fxRate;
+}
+/* 대시보드 등에서 "현재 보유가치" 합산 시 사용 — 만기가 지나 CMA로 자동 편입 설정된 채권은
+   원금이 이미 예치금 잔고 쪽에 반영되었으므로 이중계산을 막기 위해 0으로 처리합니다. */
+function currentValueKRW(h){
+  if(isBond(h) && h.returnToCashId && isMatured(h)) return 0;
+  return purchaseAmountKRW(h);
 }
 
 /* Generate the coupon / cash-flow schedule for a bond holding (mirrors the spreadsheet formulas) */
@@ -741,37 +768,77 @@ function etfSummary(h){
   return { purchaseLocal, purchaseKRW, evalKRW, pnl, ret };
 }
 
-/* ---------- CMA 대기자금(예치금): 일별로 발생하는 이자 ---------- */
-function dailyInterestGross(h){
-  // 잔고 x 연이자율 / 365  (세전, 하루치)
-  return h.quantity * h.couponRate / 365;
+/* ---------- 채권 만기 → CMA 대기자금 자동 편입 ---------- */
+function isMatured(h, asOf){
+  if(!isBond(h) || !h.maturityDate) return false;
+  const today = asOf || new Date(); today.setHours(0,0,0,0);
+  return parseDate(h.maturityDate).getTime() <= today.getTime();
 }
-function cashDailyRow(h){
-  const gross = dailyInterestGross(h);
+/* 만기 시 실제로 손에 쥐는 총액(세후, KRW) = 마지막 회차의 세후현금흐름(원금+마지막이자) */
+function bondMaturityPayoutKRW(h){
+  const s = bondSummary(h);
+  if(!s || !s.schedule.length) return 0;
+  const last = s.schedule[s.schedule.length-1];
+  return last.cashKRW;
+}
+/* 이 예치금(cashHolding)으로 만기금액이 편입되도록 연결된 채권들의 "편입 시점/금액" 목록.
+   편입 시점은 만기일이 속한 달의 "다음 달 1일"로 계산합니다. */
+function linkedMaturityInflows(cashHolding){
+  return holdings
+    .filter(h => isBond(h) && h.returnToCashId === cashHolding.id && h.maturityDate)
+    .map(h=>{
+      const maturity = parseDate(h.maturityDate);
+      const inflowDate = new Date(maturity.getFullYear(), maturity.getMonth()+1, 1);
+      return { date: inflowDate, amount: bondMaturityPayoutKRW(h), sourceName: h.name, sourceId: h.id };
+    })
+    .sort((a,b)=>a.date-b.date);
+}
+/* 특정 날짜 기준, 만기 편입분까지 반영한 "유효 잔고" */
+function cashBalanceAt(h, date){
+  let balance = h.quantity; // 기초잔고
+  linkedMaturityInflows(h).forEach(inflow=>{
+    if(inflow.date.getTime() <= date.getTime()) balance += inflow.amount;
+  });
+  return balance;
+}
+
+/* ---------- CMA 대기자금(예치금): 일별로 발생하는 이자 ---------- */
+function dailyInterestGross(h, atDate){
+  // 유효잔고(만기편입 반영) x 연이자율 / 365  (세전, 하루치)
+  const balance = cashBalanceAt(h, atDate || new Date());
+  return balance * h.couponRate / 365;
+}
+function cashDailyRow(h, atDate){
+  const gross = dailyInterestGross(h, atDate);
   const tax = gross * h.taxRate;
   return { gross, tax, net: gross - tax };
 }
-/* 일자별 누적 순이자 시리즈 (기준일~endDate, 기본값=오늘) — "일자별 발생" 시각화용 */
+/* 일자별 누적 순이자 시리즈 (기준일~endDate, 기본값=오늘) — "일자별 발생" 시각화용
+   연결된 채권이 만기→CMA로 편입되는 시점부터는 잔고가 계단식으로 늘어나며, 그만큼 이후 일별 이자도 증가합니다. */
 function generateCashDailySeries(h, endDate){
   if(!h.settlementDate) return [];
   const start = parseDate(h.settlementDate);
   const end = endDate ? new Date(endDate.getTime()) : new Date();
   end.setHours(0,0,0,0);
   if(end < start) return [];
-  const { net: dailyNet } = cashDailyRow(h);
+  const dayRate = h.couponRate / 365;
   const rows = [];
   let cum = 0;
   let d = new Date(start.getTime());
   let guard = 0;
   while(d.getTime() <= end.getTime() && guard < 5000){
     guard++;
-    cum += dailyNet;
+    const balance = cashBalanceAt(h, d);
+    const gross = balance * dayRate;
+    const net = gross - gross * h.taxRate;
+    cum += net;
     rows.push({ date: toISO(d), value: cum });
     d = new Date(d.getTime() + 86400000);
   }
   return rows;
 }
-/* 특정 달(연,월)에 대한 세전/세후 이자 (그 달 중 잔고가 존재했던 일수만큼만 계산) */
+/* 특정 달(연,월)에 대한 세전/세후 이자 (그 달 중 잔고가 존재했던 일수만큼만 계산)
+   만기 편입은 항상 "다음 달 1일"에 일어나도록 설계되어 있어, 한 달 안에서는 잔고가 일정합니다. */
 function cashMonthlyValues(h, months){
   const net = new Array(months.length).fill(0);
   const gross = new Array(months.length).fill(0);
@@ -786,7 +853,8 @@ function cashMonthlyValues(h, months){
     const effStart = monthStart.getTime() < start.getTime() ? start : monthStart;
     const days = Math.round((monthEnd.getTime() - effStart.getTime())/86400000) + 1;
     if(days <= 0) return;
-    const g = Math.round(h.quantity * dayRate * days);
+    const balance = cashBalanceAt(h, monthEnd); // 그 달 안에서는 잔고가 일정(편입은 매달 1일에만 발생)
+    const g = Math.round(balance * dayRate * days);
     const t = Math.round(g * h.taxRate);
     gross[i] = g;
     net[i] = g - t;
@@ -795,14 +863,10 @@ function cashMonthlyValues(h, months){
 }
 function cashAnnualGrossForYear(h, year){
   if(!h.settlementDate) return 0;
-  const start = parseDate(h.settlementDate);
-  const yearStart = new Date(year, 0, 1);
-  const yearEnd = new Date(year, 11, 31);
-  if(yearEnd.getTime() < start.getTime()) return 0;
-  const effStart = yearStart.getTime() < start.getTime() ? start : yearStart;
-  const days = Math.round((yearEnd.getTime() - effStart.getTime())/86400000) + 1;
-  if(days <= 0) return 0;
-  return h.quantity * (h.couponRate/365) * days;
+  const months = [];
+  for(let m=1; m<=12; m++) months.push(`${year}-${String(m).padStart(2,"0")}`);
+  const { gross } = cashMonthlyValues(h, months);
+  return gross.reduce((s,v)=>s+v, 0);
 }
 
 function finalPnlKRW(h){
@@ -925,9 +989,9 @@ function buildMonthlyMatrix(startYear, startMonth, monthCount){
 ============================================================ */
 function render(){
   const app = document.getElementById("app");
-  const totalKRW = holdings.reduce((s,h)=>s+purchaseAmountKRW(h),0);
+  const totalKRW = holdings.reduce((s,h)=>s+currentValueKRW(h),0);
   const acctTotals = {};
-  ACCOUNTS.forEach(a=> acctTotals[a] = holdings.filter(h=>h.account===a).reduce((s,h)=>s+purchaseAmountKRW(h),0));
+  ACCOUNTS.forEach(a=> acctTotals[a] = holdings.filter(h=>h.account===a).reduce((s,h)=>s+currentValueKRW(h),0));
   const acctColors = {CMA:"#2B54A8", ISA:"#1E8A56", IRP:"#B4720C", IMA:"#7A34C2"};
 
   app.innerHTML = `
@@ -1018,7 +1082,7 @@ function renderMain(){
    DASHBOARD
 ============================================================ */
 function dashboardHTML(){
-  const totalKRW = holdings.reduce((s,h)=>s+purchaseAmountKRW(h),0);
+  const totalKRW = holdings.reduce((s,h)=>s+currentValueKRW(h),0);
   const bondHoldings = holdings.filter(isBond);
   const bondPnlTotal = bondHoldings.reduce((s,h)=>{
     const summ = bondSummary(h);
@@ -1028,10 +1092,10 @@ function dashboardHTML(){
   const etfPnlKnown = etfHoldings.filter(h=>h.currentPrice!==null && h.currentPrice!=="" && h.currentPrice!==undefined);
 
   const typeTotals = {};
-  TYPES.forEach(t=> typeTotals[t] = holdings.filter(h=>h.assetType===t).reduce((s,h)=>s+purchaseAmountKRW(h),0));
+  TYPES.forEach(t=> typeTotals[t] = holdings.filter(h=>h.assetType===t).reduce((s,h)=>s+currentValueKRW(h),0));
 
   const taxTotals = {"과세":0,"비과세":0,"과세이연":0};
-  holdings.forEach(h=>{ taxTotals[h.taxCategory] = (taxTotals[h.taxCategory]||0) + purchaseAmountKRW(h); });
+  holdings.forEach(h=>{ taxTotals[h.taxCategory] = (taxTotals[h.taxCategory]||0) + currentValueKRW(h); });
 
   // combined cash-flow across all bonds, merged by calendar date
   const dateMap = {};
@@ -1046,16 +1110,17 @@ function dashboardHTML(){
   const rows = holdings.map(h=>{
     const pnl = finalPnlKRW(h);
     const source = isBond(h) ? "채권현금흐름" : (isCash(h) ? "CMA대기자금" : "ETF_IMA현황");
+    const matured = isBond(h) && h.returnToCashId && isMatured(h);
     const pnlDisplay = isCash(h)
-      ? `연이자(세전) ${fmtInt(h.quantity*h.couponRate)}`
+      ? `연이자(세전) ${fmtInt(cashBalanceAt(h, new Date())*h.couponRate)}`
       : (pnl===null ? '평가금액 입력필요' : fmtInt(pnl));
     return `<tr>
       <td class="l"><span class="tag ${h.account}">${h.account}</span></td>
       <td class="l"><span class="tag type">${h.assetType}</span></td>
-      <td class="l">${h.name}</td>
+      <td class="l">${h.name}${matured? '<div class="badge-example">만기됨 → CMA 편입 (총액에서 제외, 대기자금에 합산됨)</div>' : ''}</td>
       <td class="l"><span class="tag tax-${h.taxCategory}">${h.taxCategory}</span></td>
       <td>${h.currency}</td>
-      <td class="num">${fmtInt(purchaseAmountKRW(h))}</td>
+      <td class="num">${fmtInt(purchaseAmountKRW(h))}${matured? ' <span class="badge-example">(만기)</span>':''}</td>
       <td class="num ${pnlClass(pnl)}">${pnlDisplay}</td>
       <td class="l">${source}</td>
     </tr>`;
@@ -1097,7 +1162,7 @@ function dashboardHTML(){
         <tbody>${rows || `<tr><td colspan="8" class="empty">등록된 자산이 없습니다.</td></tr>`}</tbody>
       </table></div>
     </div>
-    <input type="hidden" id="__acctData" value='${JSON.stringify(ACCOUNTS.map(a=>({a,v:holdings.filter(h=>h.account===a).reduce((s,h)=>s+purchaseAmountKRW(h),0)})))}'>
+    <input type="hidden" id="__acctData" value='${JSON.stringify(ACCOUNTS.map(a=>({a,v:holdings.filter(h=>h.account===a).reduce((s,h)=>s+currentValueKRW(h),0)})))}'>
     <input type="hidden" id="__typeData" value='${JSON.stringify(TYPES.map(t=>({t,v:typeTotals[t]})))}'>
     <input type="hidden" id="__taxData" value='${JSON.stringify(TAX_CATS.map(t=>({t,v:taxTotals[t]})))}'>
   `;
@@ -1129,15 +1194,18 @@ function drawDashboardCharts(){
    보유자산목록 (Holdings CRUD)
 ============================================================ */
 function holdingsHTML(){
-  const rows = holdings.map(h=>`
+  const rows = holdings.map(h=>{
+    const matured = isBond(h) && h.returnToCashId && isMatured(h);
+    const linkedName = h.returnToCashId ? (holdings.find(c=>c.id===h.returnToCashId)||{}).name : null;
+    return `
     <tr>
       <td class="l"><span class="tag ${h.account}">${h.account}</span></td>
       <td class="l"><span class="tag type">${h.assetType}</span></td>
-      <td class="l">${h.name}<div class="badge-example">${h.note||""}</div></td>
+      <td class="l">${h.name}<div class="badge-example">${h.note||""}${linkedName? (h.note?' · ':'')+'만기 시 → '+linkedName+(matured?' (편입됨)':''):''}</div></td>
       <td><span class="tag tax-${h.taxCategory}">${h.taxCategory}</span></td>
       <td>${h.currency}</td>
       <td>${fmtDate(h.settlementDate)}</td>
-      <td>${isCash(h)? "-(만기없음)" : fmtDate(h.maturityDate)}</td>
+      <td>${isCash(h)? "-(만기없음)" : fmtDate(h.maturityDate)}${matured?' <span class="badge-example">만기경과</span>':''}</td>
       <td class="num">${(isBond(h)||isCash(h))? fmtPct(h.couponRate,3) : "-"}</td>
       <td class="num">${isCash(h)? "-" : fmtNum(h.pricePct,2)}</td>
       <td class="num">${fmtInt(h.quantity)}</td>
@@ -1147,7 +1215,8 @@ function holdingsHTML(){
         <button class="icon-btn" title="편집" onclick="openEdit('${h.id}')">✎</button>
         <button class="icon-btn" title="삭제" onclick="deleteHolding('${h.id}')">✕</button>
       </td>
-    </tr>`).join("");
+    </tr>`;
+  }).join("");
 
   return `
     <div class="topbar">
@@ -1202,6 +1271,13 @@ function holdingForm(h, prefill){
             <div class="field"><label>만기일</label><input type="date" id="f_maturityDate" value="${v.maturityDate||''}"></div>
           </div>
           <div class="field"><label>최초이자지급일</label><input type="date" id="f_firstCouponDate" value="${v.firstCouponDate||''}"></div>
+          <div class="field">
+            <label>만기 시 CMA로 자동 편입</label>
+            <select id="f_returnToCashId">
+              <option value="">없음 (편입 안 함)</option>
+              ${holdings.filter(isCash).map(c=>`<option value="${c.id}" ${v.returnToCashId===c.id?'selected':''}>[${c.account}] ${c.name}</option>`).join("")}
+            </select>
+          </div>
         </div>
         <div class="field-row" id="rateFieldsA" style="${(bond||cash)?'':'display:none'}">
           <div class="field"><label id="rateLabel">${bond? "표면이율(%) 예:1.479" : "연이자율(%) 예:2.47"}</label>
@@ -1287,6 +1363,7 @@ function saveHolding(id){
     taxRate: (parseFloat(val("f_taxRate"))||0)/100,
     currentPrice: val("f_currentPrice")===""? null : parseFloat(val("f_currentPrice")),
     taxCategory: val("f_taxCategory") || "과세",
+    returnToCashId: val("f_returnToCashId") || "",
     note: val("f_note")
   };
   if(data.assetType === "예치금"){
@@ -1298,6 +1375,10 @@ function saveHolding(id){
     data.firstCouponDate = null;
     data.issueDate = null;
     data.currentPrice = null;
+    data.returnToCashId = ""; // 예치금 자기 자신은 다른 예치금으로 편입되지 않음
+  }
+  if(!BOND_TYPES.includes(data.assetType)){
+    data.returnToCashId = ""; // 채권이 아니면 만기편입 개념 없음
   }
   if(id){
     const idx = holdings.findIndex(x=>x.id===id);
@@ -1354,6 +1435,16 @@ function bondHTML(){
         ${bonds.map(b=>`<option value="${b.id}" ${b.id===h.id?'selected':''}>[${b.account}] ${b.name} (${b.currency})</option>`).join("")}
       </select>
     </div>
+    ${(()=>{
+      if(!h.returnToCashId) return "";
+      const target = holdings.find(c=>c.id===h.returnToCashId);
+      if(!target) return "";
+      const matured = isMatured(h);
+      const inflowDate = new Date(parseDate(h.maturityDate).getFullYear(), parseDate(h.maturityDate).getMonth()+1, 1);
+      return `<div class="note">🔗 만기 시 CMA 자동 편입 설정됨 → <b>${target.name}</b> (${target.account}) ·
+        편입 예정일: <b>${toISO(inflowDate)}</b> · 편입액(세후 만기수령총액): <b>${fmtInt(bondMaturityPayoutKRW(h))}원</b>
+        ${matured ? ' · <span class="pill-gain">✓ 이미 편입됨</span>' : ' · <span class="pill-loss">⏳ 아직 편입 전</span>'}</div>`;
+    })()}
     <div class="kpi-row">
       <div class="kpi"><div class="lbl">투자원금(KRW)</div><div class="val num">${fmtInt(s.purchaseKRW)}</div><div class="sub">현지통화 ${fmtInt(s.purchaseLocal)} ${h.currency}</div></div>
       <div class="kpi"><div class="lbl">만기예상 총손익(세후, KRW)</div><div class="val num ${pnlClass(s.totalPnlKRW)}">${fmtInt(s.totalPnlKRW)}</div><div class="sub">최종 누적수익률 ${fmtPct(s.finalReturn)}</div></div>
@@ -1439,21 +1530,31 @@ function cashHTML(){
   const list = holdings.filter(isCash);
   const today = new Date();
 
-  const totalBalance = list.reduce((s,h)=>s+h.quantity,0);
-  const totalAnnualGross = list.reduce((s,h)=>s+h.quantity*h.couponRate,0);
-  const totalAnnualTax = list.reduce((s,h)=>s+h.quantity*h.couponRate*h.taxRate,0);
+  const totalBalance = list.reduce((s,h)=>s+cashBalanceAt(h,today),0);
+  const totalDailyGross = list.reduce((s,h)=>s+dailyInterestGross(h,today),0);
+  const totalAnnualGross = list.reduce((s,h)=>s+cashBalanceAt(h,today)*h.couponRate,0);
+  const totalAnnualTax = list.reduce((s,h)=>s+cashBalanceAt(h,today)*h.couponRate*h.taxRate,0);
   const totalAnnualNet = totalAnnualGross - totalAnnualTax;
-  const totalDailyGross = list.reduce((s,h)=>s+dailyInterestGross(h),0);
 
   const rows = list.map(h=>{
-    const d = cashDailyRow(h);
+    const effBalance = cashBalanceAt(h, today);
+    const d = cashDailyRow(h, today);
     const monthKey = ymKey(today.getFullYear(), today.getMonth()+1);
     const { net: monthNetArr, gross: monthGrossArr } = cashMonthlyValues(h, [monthKey]);
+    const inflows = linkedMaturityInflows(h);
+    const landed = inflows.filter(x=>x.date.getTime()<=today.getTime());
+    const pending = inflows.filter(x=>x.date.getTime()>today.getTime());
+    const inflowNote = (landed.length||pending.length) ? `
+      <div class="badge-example">
+        ${landed.length? `✓ 편입됨: ${landed.map(x=>`${x.sourceName}(${fmtDate(toISO(x.date))}, +${fmtInt(x.amount)})`).join(', ')}`:''}
+        ${landed.length && pending.length? '<br>':''}
+        ${pending.length? `⏳ 편입 예정: ${pending.map(x=>`${x.sourceName}(${fmtDate(toISO(x.date))}, +${fmtInt(x.amount)})`).join(', ')}`:''}
+      </div>` : '';
     return `<tr>
       <td class="l"><span class="tag ${h.account}">${h.account}</span></td>
-      <td class="l">${h.name}<div class="badge-example">${h.note||""}</div></td>
+      <td class="l">${h.name}<div class="badge-example">${h.note||""}</div>${inflowNote}</td>
       <td class="l"><span class="tag tax-${h.taxCategory}">${h.taxCategory}</span></td>
-      <td class="num">${fmtInt(h.quantity)}</td>
+      <td class="num">${fmtInt(effBalance)}${landed.length?' <span class="badge-example">(기초 '+fmtInt(h.quantity)+'+편입분)</span>':''}</td>
       <td class="num">${fmtPct(h.couponRate,2)}</td>
       <td class="num">${fmtPct(h.taxRate,1)}</td>
       <td>${fmtDate(h.settlementDate)}</td>
@@ -1468,24 +1569,27 @@ function cashHTML(){
     </tr>`;
   }).join("");
 
-  // 일자별 누적 순이자 시리즈 (전체 예치금 합산, 기준일~오늘)
-  const mergedDaily = {};
+  // 일자별 누적 순이자 시리즈 (전체 예치금 합산, 기준일~오늘) — 만기 편입으로 잔고가 계단식으로 늘어나는 구간 반영
+  const dailyDeltas = {};
   list.forEach(h=>{
     if(!h.settlementDate) return;
     const start = parseDate(h.settlementDate);
-    const dailyNet = cashDailyRow(h).net;
+    const dayRate = h.couponRate/365;
     let d = new Date(start.getTime());
     let guard = 0;
     while(d.getTime() <= today.getTime() && guard < 5000){
       guard++;
+      const balance = cashBalanceAt(h, d);
+      const gross = balance*dayRate;
+      const net = gross - gross*h.taxRate;
       const key = toISO(d);
-      mergedDaily[key] = (mergedDaily[key]||0) + dailyNet;
+      dailyDeltas[key] = (dailyDeltas[key]||0) + net;
       d = new Date(d.getTime()+86400000);
     }
   });
-  const sortedDates = Object.keys(mergedDaily).sort();
+  const sortedDates = Object.keys(dailyDeltas).sort();
   let running = 0;
-  const combinedSeries = sortedDates.map(k=>{ running += mergedDaily[k]; return {label:k, value:running}; });
+  const combinedSeries = sortedDates.map(k=>{ running += dailyDeltas[k]; return {label:k, value:running}; });
 
   return `
     <div class="topbar">
@@ -1494,23 +1598,24 @@ function cashHTML(){
     </div>
     <div class="note">
       CMA 대기자금(RP형/발행어음형 등)은 만기가 없는 수시입출금성 예치금으로, <b>잔고 × 연이자율 ÷ 365</b>로 매일 이자가 발생한다고 가정합니다.
-      실제로는 매일 잔고가 바뀔 수 있으나, 이 화면은 입력해 둔 현재 잔고가 계속 유지된다고 가정한 단순 추정치입니다.
+      채권 편집 화면에서 <b>"만기 시 CMA로 자동 편입"</b>을 이 대기자금으로 지정해두면, 그 채권이 만기된 <b>다음 달 1일부터</b> 만기수령액(원금+마지막 이자, 세후)이
+      이 잔고에 자동으로 더해져 그 이후 이자 계산에도 반영됩니다.
     </div>
     <div class="kpi-row">
-      <div class="kpi"><div class="lbl">대기자금 총 잔고(KRW)</div><div class="val num">${fmtInt(totalBalance)}</div><div class="sub">${list.length}건</div></div>
+      <div class="kpi"><div class="lbl">대기자금 총 잔고(KRW, 현재기준)</div><div class="val num">${fmtInt(totalBalance)}</div><div class="sub">${list.length}건</div></div>
       <div class="kpi"><div class="lbl">오늘 하루 이자(세전)</div><div class="val num">${fmtInt(totalDailyGross)}</div><div class="sub">잔고 × 연이자율 ÷ 365</div></div>
       <div class="kpi"><div class="lbl">연환산 예상 이자소득(세전)</div><div class="val num">${fmtInt(totalAnnualGross)}</div><div class="sub">세후 ${fmtInt(totalAnnualNet)}</div></div>
-      <div class="kpi"><div class="lbl">연환산 세금(예상)</div><div class="val num pill-loss">${fmtInt(totalAnnualTax)}</div><div class="sub">과세 적용시 기준</div></div>
+      <div class="kpi"><div class="lbl">연환산 세금(예상)</div><div class="val num pill-loss">${fmtInt(totalAnnualTax)}</div><div class="sub">과세 적용시 기준, 오늘 잔고 유지 가정</div></div>
     </div>
     <div class="card" style="margin-bottom:16px;">
-      <h3>일자별 누적 이자발생 추이(세후) <span class="muted">기준일 ~ 오늘, 잔고 유지 가정</span></h3>
+      <h3>일자별 누적 이자발생 추이(세후) <span class="muted">기준일 ~ 오늘, 만기 편입 반영</span></h3>
       <div class="chart-wrap">${combinedSeries.length? lineChartSVG(combinedSeries,{color:"#3667C7"}) : '<div class="empty">기준일이 입력된 대기자금이 없습니다.</div>'}</div>
     </div>
     <div class="card">
       <h3>대기자금 상세 <span class="muted">${list.length}건</span></h3>
       <div class="scrollx"><table>
         <thead><tr>
-          <th class="l">계좌</th><th class="l">종목명</th><th class="l">과세구분</th><th>잔고(KRW)</th>
+          <th class="l">계좌</th><th class="l">종목명</th><th class="l">과세구분</th><th>잔고(KRW, 현재기준)</th>
           <th>연이자율</th><th>세율</th><th class="l">기준일</th><th>일이자(세전)</th><th>일이자(세후)</th>
           <th>이번달 예상(세전)</th><th>이번달 예상(세후)</th><th>관리</th>
         </tr></thead>
@@ -1703,7 +1808,8 @@ function helpHTML(){
         <li><b>보유자산목록</b> — CMA · ISA · IRP · IMA 전 계좌 자산을 등록/편집/삭제하고 과세구분을 지정하는 마스터 목록</li>
         <li><b>채권현금흐름</b> — 국내채권 · 해외채권 공통 양식. 채권을 선택하면 매수~만기 현금흐름과 누적손익이 자동 계산됩니다</li>
         <li><b>ETF · IMA현황</b> — 채권이 아닌 자산은 현재가를 직접 입력해 평가손익을 확인합니다</li>
-        <li><b>CMA대기자금</b> — 개별 상품(채권·ETF) 매수 후 남은 CMA 잔고와, 그 잔고에서 매일 발생하는 이자소득(과세)을 확인합니다</li>
+        <li><b>CMA대기자금</b> — 개별 상품(채권·ETF) 매수 후 남은 CMA 잔고와, 그 잔고에서 매일 발생하는 이자소득(과세)을 확인합니다.
+          채권이 만기되면 설정에 따라 원리금이 이 잔고로 자동 편입됩니다.</li>
         <li><b>세금 · 건보료</b> — 연도별 과세/비과세/과세이연 이자소득(채권+대기자금 합산)을 집계하여 건강보험료(1,000만원)·금융소득종합과세(2,000만원) 기준과 비교합니다</li>
         <li><b>월별현금흐름</b> — 채권 이자를 이자발생월 다음 달부터 균등 안분하고, CMA대기자금 이자는 해당월 실일수 기준으로 반영한 실제 월별 현금흐름표</li>
       </ul>
@@ -1714,6 +1820,10 @@ function helpHTML(){
         <li>외화 채권은 통화(USD/BRL 등)와 매수시 환율(KRW 기준)을 입력하면 KRW 환산 금액이 자동 계산됩니다.</li>
         <li>ETF · IMA는 매수단가에 좌당(또는 1단위) 가격을, 수량에 좌수(또는 1)를 입력합니다.</li>
         <li><b>과세구분</b>은 계좌 선택 시 CMA·IMA=과세, ISA=비과세, IRP=과세이연으로 자동 제안되며, 필요시 직접 변경할 수 있습니다.</li>
+        <li>채권 입력 화면의 <b>"만기 시 CMA로 자동 편입"</b>에서 예치금(CMA대기자금) 항목을 선택하면, 그 채권이 만기된
+          <b>다음 달 1일부터</b> 만기수령총액(원금+마지막 이자, 세후)이 그 예치금 잔고에 자동으로 더해지고,
+          그 이후 이자 계산·월별현금흐름·세금 분석에 반영됩니다. 이 경우 만기가 지난 채권의 원래 매수금액은
+          "총 투자금액" 등 합계에서는 제외되어(예치금 쪽에 이미 포함되었으므로) 중복 계산을 방지합니다.</li>
       </ul>
       <h4>세금 · 건보료 판단 기준 (요약)</h4>
       <ul>
@@ -1741,7 +1851,7 @@ function helpHTML(){
         <li>저장은 기본적으로 이 브라우저의 로컬 저장소(localStorage)에 남습니다. 브라우저 데이터를 지우거나
           다른 브라우저·기기·시크릿 모드로 열면 이 저장 내용은 보이지 않습니다.</li>
         <li>기기를 바꾸거나 백업이 필요할 때는 <b>JSON 내보내기</b>로 파일을 저장해 두고, 다른 곳에서 <b>JSON 가져오기</b>로 불러오세요.</li>
-        <li>'예시 데이터로 초기화'를 누르면 최초 예시 12건(CMA대기자금 포함)으로 되돌아가고 그 상태가 바로 저장됩니다.</li>
+        <li>'예시 데이터로 초기화'를 누르면 최초 예시 15건(CMA대기자금 포함)으로 되돌아가고 그 상태가 바로 저장됩니다.</li>
       </ul>
       <h4>배우자·PB 등과 공유하기 (GitHub 공유 설정)</h4>
       <p>로컬 저장소는 기기별로 따로 저장되기 때문에, 다른 사람이 같은 GitHub Pages 링크를 처음 열면 저장된 실제 수치가 아니라
@@ -1763,8 +1873,11 @@ function helpHTML(){
         <li>GitHub의 raw 파일은 짧게(수 분) 캐시될 수 있어, 저장 직후 다른 사람 화면에 반영되기까지 약간의 지연이 있을 수 있습니다.</li>
       </ul>
       <h4>예시 데이터 안내</h4>
-      <p>한전채(한국전력공사채권1022) · KT채(KT193-3) · 브라질국채(USD, Brazil 8 1/4 01/20/34)는 실제 매매계산서 수치를 예시로 넣었습니다.
-        그 외(국고채, 대한항공채, 브라질국채 BRL, ETF, IMA)는 구조 설명용 가상의 예시 값이니 반드시 실제 보유조건으로 교체하세요.</p>
+      <p>CMA 계좌의 국고채권 01375-2912(19-8) · 한전채(한국전력공사채권1022) · 대한항공118-2 · KT채(KT193-3) ·
+        브라질국채(BNTNF 10 01/01/35, BRL)는 실제 채권모의투자계산서 수치를 그대로 반영했습니다.
+        브라질국채(USD, 2035만기) · 저쿠폰(1.3%) 국채 3건(CMA대기자금 전환분 및 2029년 만기채권 재투자분) · VOO/QQQ ETF는
+        말씀하신 계획을 바탕으로 한 가상 시나리오입니다. 그 외(ISA 대한항공채, IRP 국고채, IMA)는 구조 설명용
+        가상의 예시 값이니 반드시 실제 보유조건으로 교체하세요.</p>
     </div>
   `;
 }
