@@ -74,6 +74,10 @@
   .save-status.dirty{color:#F0B429;font-weight:700;}
   .save-status.clean{color:rgba(255,255,255,0.45);}
   .sync-status{font-size:10px;text-align:center;margin:0 0 8px 0;line-height:1.5;color:rgba(255,255,255,0.5);}
+  .sync-diagnostic{font-size:10px;text-align:center;margin:0 0 8px 0;line-height:1.5;padding:6px 8px;border-radius:6px;}
+  .sync-diagnostic.info{color:#8FC9A8;background:rgba(30,138,86,0.14);}
+  .sync-diagnostic.warn{color:#F0B429;background:rgba(240,180,41,0.14);}
+  .sync-diagnostic.error{color:#F08A8A;background:rgba(214,69,90,0.14);}
   .readonly-badge{
     background:rgba(240,180,41,0.16);color:#F0B429;border:1px solid rgba(240,180,41,0.35);
     padding:6px 10px;border-radius:7px;font-size:11px;font-weight:800;text-align:center;margin-bottom:2px;
@@ -252,11 +256,11 @@ function seedHoldings(){
       settlementDate:"2026-09-01", firstCouponDate:"2027-01-20", pricePct:114.95, quantity:47483,
       fxRate:1420, taxRate:0.154, currentPrice:null, taxCategory:"과세",
       note:"가상 매수 예시 - 기환전한 USD 54,581 매수 가정, 기존 Brazil 8 1/4 01/20/34 조건을 2035년 만기로 준용(단가·표면금리 동일 가정)" },
-    { id: uid(), account:"CMA", assetType:"국내채권", name:"국고채(1.3%,6개월물) - CMA대기자금 세금최소화 전환", rating:"국채", currency:"KRW",
-      issueDate:"2026-09-01", maturityDate:"2034-03-01", couponRate:0.013, cycleMonths:6,
+    { id: uid(), account:"CMA", assetType:"국내채권", name:"국고채(1.3%,6개월물) - CMA대기자금 임시전환", rating:"국채", currency:"KRW",
+      issueDate:"2026-09-01", maturityDate:"2027-03-01", couponRate:0.013, cycleMonths:6,
       settlementDate:"2026-09-01", firstCouponDate:"2027-03-01", pricePct:99.25, quantity:200000000,
       fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", returnToCashId:"h15",
-      note:"CMA대기자금 2억원을 과세이자 부담 최소화 목적으로 2026년 9월초 저쿠폰(1.3%) 국채로 전환·유지(가정). 표면금리가 낮은 채권을 할인가에 매수하면 상환차익(비과세) 비중이 커져 이자소득세 부담이 줄어드는 구조를 반영. 6개월물 성격으로 2034년까지 동일조건 유지 가정 → 만기 시 CMA대기자금으로 편입" },
+      note:"CMA대기자금 2억원을 과세이자 부담 최소화 목적으로 2026년 9월초 저쿠폰(1.3%) 국채로 6개월간 단발성 전환(가정). 표면금리가 낮은 채권을 할인가에 매수하면 상환차익(비과세) 비중이 커져 이자소득세 부담이 줄어드는 구조를 반영. 6개월 만기 후에는 재투자하지 않고 CMA대기자금으로 편입" },
     { id: uid(), account:"CMA", assetType:"국내채권", name:"국고채(1.3%,6개월물) - 국고채권 만기후 재투자", rating:"국채", currency:"KRW",
       issueDate:"2029-12-10", maturityDate:"2034-06-10", couponRate:0.013, cycleMonths:6,
       settlementDate:"2029-12-10", firstCouponDate:"2030-06-10", pricePct:99.25, quantity:100000000,
@@ -291,8 +295,9 @@ function seedHoldings(){
       fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"IMA는 목표수익률 개념(만기/조기상환 조건 별도 확인) - 예시(가상)" },
     { id: uid(), account:"CMA", assetType:"예치금", name:"CMA 대기자금(RP형)", rating:"-", currency:"KRW",
       issueDate:null, maturityDate:null, couponRate:0.0247, cycleMonths:1,
-      settlementDate:"2026-08-08", firstCouponDate:null, pricePct:100, quantity:15000000,
-      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세", note:"개별 상품 매수 후 남은 대기자금(예시) - 실제 잔고로 교체" },
+      settlementDate:"2026-08-08", firstCouponDate:null, pricePct:100, quantity:0,
+      fxRate:1, taxRate:0.154, currentPrice:null, taxCategory:"과세",
+      note:"기초잔고 없음(0원) - 연결된 채권 만기 편입분(한전채·KT채·CMA대기자금 임시전환분·대한항공118-2 재투자분)으로만 잔고가 채워지도록 구성" },
   ];
 }
 
@@ -363,18 +368,55 @@ function b64DecodeUtf8(str){
   return decodeURIComponent(escape(atob(str)));
 }
 /* 공유 데이터 읽기 — 공개 저장소는 토큰 없이도 raw URL로 읽을 수 있음 */
+let lastFetchDiagnostic = null; // {level:"info"|"warn"|"error", message:string} — shown in UI, not just console
+
 async function fetchSharedData(){
   const cfg = getGithubConfig();
-  if(!githubReadConfigured(cfg)) return null;
+  if(!githubReadConfigured(cfg)){
+    lastFetchDiagnostic = null;
+    return null;
+  }
+  if(window.location.protocol === "file:"){
+    lastFetchDiagnostic = {
+      level: "warn",
+      message: "이 파일을 로컬에서 직접 열어서(file:///...) GitHub 공유 데이터를 불러올 수 없습니다. " +
+                "GitHub Pages 주소(https://... .github.io/...)로 접속해야 공유 데이터가 반영됩니다."
+    };
+    return null;
+  }
   try{
     const url = `https://raw.githubusercontent.com/${cfg.owner}/${cfg.repo}/${cfg.branch||'main'}/${cfg.path}?t=${Date.now()}`;
     const res = await fetch(url, { cache:"no-store" });
-    if(!res.ok) return null;
+    if(res.status === 404){
+      lastFetchDiagnostic = {
+        level: "info",
+        message: `${cfg.owner}/${cfg.repo}에 아직 ${cfg.path} 파일이 없습니다. 처음 '저장'을 누르면 자동 생성됩니다.`
+      };
+      return null;
+    }
+    if(!res.ok){
+      lastFetchDiagnostic = {
+        level: "error",
+        message: `GitHub에서 데이터를 불러오지 못했습니다 (상태 코드 ${res.status}). owner/repo/branch/path 설정이나 저장소가 공개(Public)인지 확인해 주세요.`
+      };
+      return null;
+    }
     const data = await res.json();
-    if(!data || !Array.isArray(data.holdings)) return null;
+    if(!data || !Array.isArray(data.holdings)){
+      lastFetchDiagnostic = { level:"error", message: "GitHub의 데이터 파일 형식이 올바르지 않습니다." };
+      return null;
+    }
+    lastFetchDiagnostic = null; // 성공 시 진단 메시지 없음
     return data;
   }catch(e){
-    console.error("GitHub 공유데이터 불러오기 실패:", e);
+    // 네트워크 자체가 막힌 경우 (오프라인, CORS 차단, DNS 실패 등)
+    console.warn("GitHub 공유데이터 불러오기 실패(자동으로 로컬/예시 데이터로 대체됨):", e);
+    lastFetchDiagnostic = {
+      level: "error",
+      message: "GitHub 서버에 연결하지 못했습니다. 인터넷 연결을 확인하시거나, owner/repo 이름에 오타가 없는지 " +
+                "'공유 설정'에서 확인해 주세요. (인터넷은 정상인데 계속 이 메시지가 뜨면 브라우저나 네트워크가 " +
+                "raw.githubusercontent.com 접속을 차단하고 있을 수 있습니다.)"
+    };
     return null;
   }
 }
@@ -623,6 +665,30 @@ async function initApp(){
   uidCounter = savedCounter > maxId ? savedCounter : maxId + 1;
 
   appReady = true;
+  render();
+}
+
+async function retrySharedFetch(){
+  showToast("GitHub 연결을 다시 시도합니다...");
+  const shared = await fetchSharedData();
+  if(shared){
+    if(isDirty){
+      const proceed = confirm(
+        "저장되지 않은 변경사항이 있습니다. GitHub의 공유 데이터를 다시 불러오면 " +
+        "지금 화면의 변경사항은 사라집니다. 그래도 다시 불러올까요?"
+      );
+      if(!proceed) return;
+    }
+    holdings = shared.holdings;
+    lastSavedAt = shared.savedAt || null;
+    lastSyncedAt = shared.savedAt || null;
+    isDirty = false;
+    showToast("✓ GitHub 공유 데이터를 불러왔습니다.");
+  } else if(!lastFetchDiagnostic){
+    showToast("공유 설정이 없습니다.", true);
+  } else {
+    showToast("여전히 연결에 실패했습니다: " + lastFetchDiagnostic.message, true);
+  }
   render();
 }
 let activeTab = "dashboard";
@@ -1040,6 +1106,9 @@ function render(){
              ${isReadOnlyShared() ? '<br><span style="color:#F0B429;">쓰기 토큰 없음 — 저장은 임시(이 기기만)</span>' : ''}`
             : '🔌 공유 설정 안 됨 (이 기기에만 저장)'}
         </div>
+        ${lastFetchDiagnostic ? `<div class="sync-diagnostic ${lastFetchDiagnostic.level}">${lastFetchDiagnostic.message}
+            ${lastFetchDiagnostic.level!=="info" ? '<br><button class="ghostbtn" style="margin-top:6px;padding:4px 8px;font-size:10px;" onclick="retrySharedFetch()">↻ 다시 시도</button>' : ''}
+          </div>` : ""}
         <button class="ghostbtn" onclick="openGithubSettings()">⚙ 공유 설정(GitHub)</button>
         <button class="ghostbtn" onclick="exportData()">⭳ JSON 내보내기</button>
         <button class="ghostbtn" onclick="document.getElementById('importFile').click()">⭱ JSON 가져오기</button>
@@ -1871,6 +1940,8 @@ function helpHTML(){
         <li>💾 저장을 누르면 (쓰기 토큰이 있는 경우) 이 기기의 로컬 저장소와 함께 GitHub 저장소의 데이터 파일도 함께 갱신됩니다.
           사이드바 하단에 연결 상태와 마지막 동기화 시각이 표시됩니다.</li>
         <li>GitHub의 raw 파일은 짧게(수 분) 캐시될 수 있어, 저장 직후 다른 사람 화면에 반영되기까지 약간의 지연이 있을 수 있습니다.</li>
+        <li>공유 데이터를 불러오지 못하면 사이드바에 원인(파일 없음/저장소 오류/네트워크 오류/로컬 파일로 직접 열어서 등)이
+          색깔별로 표시되고, <b>↻ 다시 시도</b> 버튼으로 재접속을 시도할 수 있습니다.</li>
       </ul>
       <h4>예시 데이터 안내</h4>
       <p>CMA 계좌의 국고채권 01375-2912(19-8) · 한전채(한국전력공사채권1022) · 대한항공118-2 · KT채(KT193-3) ·
